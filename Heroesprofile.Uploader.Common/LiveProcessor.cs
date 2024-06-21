@@ -2,24 +2,14 @@
 using NLog;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Security.Cryptography;
-using System.Text;
 using System.Threading.Tasks;
 using System.Net.Http;
-using Newtonsoft.Json;
 using System.Diagnostics;
 using System.IO;
-using Newtonsoft.Json.Linq;
-using System.Net;
 
 //Live File Parsers
 using MpqBattlelobby = Heroes.ReplayParser.MPQFiles.StandaloneBattleLobbyParser;
-using MpqHeader = Heroes.ReplayParser.MPQFiles.MpqHeader;
-using MpqDetails = Heroes.ReplayParser.MPQFiles.ReplayDetails;
-using MpqAttributeEvents = Heroes.ReplayParser.MPQFiles.ReplayAttributeEvents;
-using MpqInitData = Heroes.ReplayParser.MPQFiles.ReplayInitData;
-using MpqTrackerEvents = Heroes.ReplayParser.MPQFiles.ReplayTrackerEvents;
+using System.Text.Json;
 
 namespace Heroesprofile.Uploader.Common
 {
@@ -71,7 +61,7 @@ namespace Heroesprofile.Uploader.Common
                 HttpClient client = new HttpClient();
                 var values = new Dictionary<string, string>
                 {
-                    { "data", JsonConvert.SerializeObject(replayData.Players) },
+                    { "data", JsonSerializer.Serialize(replayData.Players) },
                 };
 
                 var content = new FormUrlEncodedContent(values);

@@ -1,6 +1,6 @@
 ﻿using Heroesprofile.Uploader.Windows.Properties;
 
-using Squirrel;
+// using Squirrel;
 
 using System;
 using System.Diagnostics;
@@ -66,9 +66,9 @@ namespace Heroesprofile.Uploader.Windows
         {
             // Actually this should never happen when squirrel is disabled
 #pragma warning disable 162
-            if (!App.NoSquirrel) {
-                await UpdateManager.RestartAppWhenExited();
-            }
+            //if (!App.NoSquirrel) {
+            //    await UpdateManager.RestartAppWhenExited();
+            //}
 #pragma warning restore 162
             App.Shutdown();
         }

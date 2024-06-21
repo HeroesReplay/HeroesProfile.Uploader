@@ -1,11 +1,11 @@
-﻿
+
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.29519.87
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Heroesprofile.Uploader.Common", "Heroesprofile.Uploader.Common\Heroesprofile.Uploader.Common.csproj", "{DC695BCC-4403-4B20-B4F5-EB80683E5967}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Heroesprofile.Uploader.Windows", "Heroesprofile.Uploader.Windows\Heroesprofile.Uploader.Windows.csproj", "{F774F86B-410F-410D-9719-ADF892D315D5}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Heroesprofile.Uploader.Windows", "Heroesprofile.Uploader.Windows\Heroesprofile.Uploader.Windows.csproj", "{F774F86B-410F-410D-9719-ADF892D315D5}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Heroes.ReplayParser", "Heroes.ReplayParser\Heroes.ReplayParser\Heroes.ReplayParser.csproj", "{85CFBB82-4AA8-49D8-874B-ED5D4EEEC3BB}"
 EndProject

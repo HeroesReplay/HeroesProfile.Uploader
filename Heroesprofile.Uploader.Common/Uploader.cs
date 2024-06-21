@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json.Linq;
+﻿// using Newtonsoft.Json.Linq;
 using NLog;
 using System;
 using System.Collections.Generic;
@@ -10,6 +10,7 @@ using Heroes.ReplayParser;
 using System.IO;
 using System.Diagnostics;
 using System.Reflection;
+using System.Text.Json;
 
 namespace Heroesprofile.Uploader.Common
 {
@@ -20,9 +21,6 @@ namespace Heroesprofile.Uploader.Common
         const string HeroesProfileApiEndpoint = "http://127.0.0.1:8000/api";
         const string HeroesProfileMatchParsed = "http://127.0.0.1:8000/openApi/Replay/Parsed/?replayID=";
         const string HeroesProfileMatchSummary = "http://localhost/Match/Single/?replayID=";
-
-
-
 #else
         const string HeroesProfileApiEndpoint = "https://api.heroesprofile.com/api";
         const string HeroesProfileMatchParsed = "https://api.heroesprofile.com/openApi/Replay/Parsed/?replayID=";
@@ -136,8 +134,9 @@ namespace Heroesprofile.Uploader.Common
                 using (var client = new WebClient()) {
                     response = await client.DownloadStringTaskAsync($"{HeroesProfileApiEndpoint}/replays/fingerprints/{fingerprint}");
                 }
-                dynamic json = JObject.Parse(response);
-                return (bool)json.exists;
+                return JsonDocument.Parse(response).RootElement.GetProperty("exists").GetBoolean();
+                //dynamic json = JObject.Parse(response);
+                //return (bool)json.exists;
             }
             catch (WebException ex) {
                 if (await CheckApiThrottling(ex.Response)) {
@@ -159,8 +158,10 @@ namespace Heroesprofile.Uploader.Common
                 using (var client = new WebClient()) {
                     response = await client.UploadStringTaskAsync($"{HeroesProfileApiEndpoint}/replays/fingerprints", String.Join("\n", fingerprints));
                 }
-                dynamic json = JObject.Parse(response);
-                return (json.exists as JArray).Select(x => x.ToString()).ToArray();
+
+                // dynamic json = JObject.Parse(response);                
+                // return (json.exists as JArray).Select(x => x.ToString()).ToArray();
+                return JsonDocument.Parse(response).RootElement.GetProperty("exists").EnumerateArray().Select(x => x.GetString()).ToArray();
             }
             catch (WebException ex) {
                 if (await CheckApiThrottling(ex.Response)) {

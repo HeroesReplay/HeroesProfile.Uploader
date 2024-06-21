@@ -9,7 +9,7 @@
     <dependencies />
   </metadata>
   <files>
-    <file src="*.*" target="lib\net45\" exclude="*.nupkg;*.vshost.*;*.xml;*.pdb;*.snk" />
+    <file src="*.*" target="lib\net8\" exclude="*.nupkg;*.vshost.*;*.xml;*.pdb;*.snk" />
     <!--file src="Heroesprofile.Uploader.pdb;Heroesprofile.Uploader.Common.pdb;Heroes.ReplayParser.netstandard.pdb;MpqTool.netstandard.pdb" target="lib\net45\" /-->
   </files>
 </package>

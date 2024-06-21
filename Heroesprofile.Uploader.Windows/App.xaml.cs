@@ -4,7 +4,7 @@ using Microsoft.Win32;
 
 using NLog;
 
-using Squirrel;
+// using Squirrel;
 
 using System;
 using System.Collections.Generic;
@@ -45,12 +45,12 @@ namespace Heroesprofile.Uploader.Windows
 
         public NotifyIcon TrayIcon { get; private set; }
         public Manager Manager { get; private set; }
-        public static Properties.Settings Settings { get { return Heroesprofile.Uploader.Windows.Properties.Settings.Default; } }
+        internal static Properties.Settings Settings => Uploader.Windows.Properties.Settings.Default;
         public static string AppExe { get { return Assembly.GetExecutingAssembly().Location; } }
         public static string AppDir { get { return Path.GetDirectoryName(AppExe); } }
         public static string AppFile { get { return Path.GetFileName(AppExe); } }
         public static string SettingsDir { get { return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Heroesprofile"); } }
-        public static UpdateManager DummyUpdateManager => new UpdateManager(@"not needed here");
+        //public static UpdateManager DummyUpdateManager => new UpdateManager(@"not needed here");
         public bool UpdateAvailable
         {
             get {
@@ -80,9 +80,9 @@ namespace Heroesprofile.Uploader.Windows
             }
             set {
                 if (value) {
-                    DummyUpdateManager.CreateShortcutsForExecutable(AppFile, ShortcutLocation.Startup, false, "--autorun");
+                    //DummyUpdateManager.CreateShortcutsForExecutable(AppFile, ShortcutLocation.Startup, false, "--autorun");
                 } else {
-                    DummyUpdateManager.RemoveShortcutsForExecutable(AppFile, ShortcutLocation.Startup);
+                    //DummyUpdateManager.RemoveShortcutsForExecutable(AppFile, ShortcutLocation.Startup);
                 }
             }
         }
@@ -93,7 +93,7 @@ namespace Heroesprofile.Uploader.Windows
         };
 
         private static Logger _log = LogManager.GetCurrentClassLogger();
-        private UpdateManager _updateManager;
+        //private UpdateManager _updateManager;
         private bool _updateAvailable;
         private object _lock = new object();
         public MainWindow mainWindow;
@@ -114,7 +114,7 @@ namespace Heroesprofile.Uploader.Windows
 
             Manager.PreMatchPage = Settings.PreMatchPage;
             Manager.PostMatchPage = Settings.PostMatchPage;
-    
+
             Manager.DeleteAfterUpload = Settings.DeleteAfterUpload;
 
             ApplyTheme(Settings.Theme);
@@ -165,7 +165,7 @@ namespace Heroesprofile.Uploader.Windows
 #pragma warning disable 162
             // ReSharper disable HeuristicUnreachableCode
             if (!NoSquirrel) {
-                _updateManager?.Dispose();
+                //_updateManager?.Dispose();
             }
             // ReSharper restore HeuristicUnreachableCode
 #pragma warning restore 162
@@ -218,15 +218,15 @@ namespace Heroesprofile.Uploader.Windows
                 return;
             }
             try {
-                if (_updateManager == null) {
-                    _updateManager = await UpdateManager.GitHubUpdateManager(Settings.UpdateRepository, prerelease: Settings.AllowPreReleases);
-                }
-                var release = await _updateManager.UpdateApp();
-                if (release != null) {
-                    _log.Info($"Updating app to version {release.Version}");
-                    UpdateAvailable = true;
-                    BackupSettings();
-                }
+                //if (_updateManager == null) {
+                //    _updateManager = await UpdateManager.GitHubUpdateManager(Settings.UpdateRepository, prerelease: Settings.AllowPreReleases);
+                //}
+                //var release = await _updateManager.UpdateApp();
+                //if (release != null) {
+                //    _log.Info($"Updating app to version {release.Version}");
+                //    UpdateAvailable = true;
+                //    BackupSettings();
+                //}
             }
             catch (Exception e) {
                 _log.Warn(e, "Error checking for updates");

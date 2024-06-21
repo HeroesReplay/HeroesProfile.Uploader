@@ -8,7 +8,7 @@ using System.Windows.Controls;
 
 namespace Heroesprofile.Uploader.Windows.UIHelpers
 {
-    internal class MarginSetter
+    public class MarginSetter
     {
         public static Thickness GetMargin(DependencyObject obj)
         {

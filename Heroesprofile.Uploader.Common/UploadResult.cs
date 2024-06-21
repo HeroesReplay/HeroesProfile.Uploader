@@ -9,42 +9,39 @@
 namespace Heroesprofile.Uploader.Common
 {
     using System;
-    using System.Collections.Generic;
 
     using System.Globalization;
-    using Newtonsoft.Json;
-    using Newtonsoft.Json.Converters;
+    using System.Text.Json;
+    using System.Text.Json.Serialization;
 
     public partial class UploadResult
     {
-        [JsonProperty("fingerprint")]
+        [JsonPropertyName("fingerprint")]
         public Guid Fingerprint { get; set; }
 
-        [JsonProperty("replayID")]
+        [JsonPropertyName("replayID")]
         public int ReplayId { get; set; }
 
-        [JsonProperty("status")]
+        [JsonPropertyName("status")]
         public string Status { get; set; }
     }
 
     public partial class UploadResult
     {
-        public static UploadResult FromJson(string json) => JsonConvert.DeserializeObject<UploadResult>(json, Heroesprofile.Uploader.Common.Converter.Settings);
+        public static UploadResult FromJson(string json) => JsonSerializer.Deserialize<UploadResult>(json, Heroesprofile.Uploader.Common.Converter.Settings);
     }
 
     public static class Serialize
     {
-        public static string ToJson(this UploadResult self) => JsonConvert.SerializeObject(self, Heroesprofile.Uploader.Common.Converter.Settings);
+        public static string ToJson(this UploadResult self) => JsonSerializer.Serialize(self, Heroesprofile.Uploader.Common.Converter.Settings);
     }
 
     internal static class Converter
     {
-        public static readonly JsonSerializerSettings Settings = new JsonSerializerSettings {
-            MetadataPropertyHandling = MetadataPropertyHandling.Ignore,
-            DateParseHandling = DateParseHandling.None,
-            Converters =
-            {
-                new IsoDateTimeConverter { DateTimeStyles = DateTimeStyles.AssumeUniversal }
+        public static readonly JsonSerializerOptions Settings = new JsonSerializerOptions {
+
+            Converters = { 
+                new IsoDateTimeConverter(DateTimeStyles.AssumeUniversal)
             },
         };
     }

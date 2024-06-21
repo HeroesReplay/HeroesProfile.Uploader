@@ -39,7 +39,7 @@
                     <DockPanel LastChildFill="True">
                         <TextBlock DockPanel.Dock="Right" Text="{Binding UploadStatus, Converter={StaticResource statusConverter}}" Foreground="{Binding UploadStatus, Converter={StaticResource statusColorConverter}}" />
                         <TextBlock Text="{Binding Filename, Converter={StaticResource filenameConverter}}" DockPanel.Dock="Left" />
-                        <TextBlock Text="&#x2718;" Foreground="{StaticResource FileDeletedIconBrush}" DockPanel.Dock="Left" Visibility="{Binding Deleted, Converter={StaticResource visibilityConverter}}" 
+                        <TextBlock Text="&#x2718;" Foreground="{StaticResource ResourceKey=FileDeletedIconBrush}" DockPanel.Dock="Left" Visibility="{Binding Deleted, Converter={StaticResource visibilityConverter}}" 
                                    ToolTip="This replay has been deleted by uploader according to your settings" />
                     </DockPanel>
                 </DataTemplate>
