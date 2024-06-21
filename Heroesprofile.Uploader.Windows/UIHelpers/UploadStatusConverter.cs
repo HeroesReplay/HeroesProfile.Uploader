@@ -1,8 +1,6 @@
 ﻿using Heroesprofile.Uploader.Common;
-using System;
-using System.Linq;
+
 using System.Text.RegularExpressions;
-using System.Windows;
 
 namespace Heroesprofile.Uploader.Windows.UIHelpers
 {

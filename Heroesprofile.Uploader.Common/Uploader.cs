@@ -1,5 +1,4 @@
-﻿// using Newtonsoft.Json.Linq;
-using NLog;
+﻿using NLog;
 using System;
 using System.Collections.Generic;
 using System.Linq;

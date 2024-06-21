@@ -11,9 +11,9 @@ namespace Heroesprofile.Uploader.Windows
         public SettingsWindow()
         {
             InitializeComponent();
-            if (App.Settings.AllowPreReleases) {
-                PreReleasePanel.Visibility = Visibility.Visible;
-            }
+            //if (App.Settings.AllowPreReleases) {
+            //    PreReleasePanel.Visibility = Visibility.Visible;
+            //}
         }
 
         private void Window_KeyDown(object sender, KeyEventArgs e)

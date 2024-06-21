@@ -1,9 +1,4 @@
-﻿using Heroesprofile.Uploader.Common;
-using System;
-using System.Linq;
-using System.IO;
-using System.Text.RegularExpressions;
-using System.Windows.Media;
+﻿using System.IO;
 
 namespace Heroesprofile.Uploader.Windows.UIHelpers
 {

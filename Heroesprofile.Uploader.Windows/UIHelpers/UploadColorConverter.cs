@@ -1,6 +1,5 @@
 ﻿using Heroesprofile.Uploader.Common;
-using System;
-using System.Linq;
+
 using System.Windows.Media;
 
 namespace Heroesprofile.Uploader.Windows.UIHelpers

@@ -1,6 +1,6 @@
 ﻿using Heroesprofile.Uploader.Common;
 
-using Microsoft.Win32;
+using Microsoft.Extensions.Configuration;
 
 using NLog;
 
@@ -9,8 +9,6 @@ using NLog;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Configuration;
-using System.Data;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -18,28 +16,20 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Data;
 using System.Windows.Forms;
-using System.Windows.Threading;
 
 using Application = System.Windows.Application;
 using MessageBox = System.Windows.MessageBox;
 
 namespace Heroesprofile.Uploader.Windows
 {
+
     public partial class App : Application, INotifyPropertyChanged
     {
-#if DEBUG
-        public const bool Debug = true;
-#else
-        public const bool Debug = false;
-#endif
+        public static IConfiguration Config { get; private set; }
 
-#if NOSQUIRREL
-        public const bool NoSquirrel = true;
-#else
-        public const bool NoSquirrel = false;
-#endif
-        // Don't want to write converters, using this quick hack instead
-        public static bool StartWithWindowsCheckboxEnabled => !NoSquirrel;
+        public AppConfig AppConfig { get; private set; }
+
+        public static bool StartWithWindowsCheckboxEnabled => true;
 
         public event PropertyChangedEventHandler PropertyChanged;
 
@@ -50,20 +40,6 @@ namespace Heroesprofile.Uploader.Windows
         public static string AppDir { get { return Path.GetDirectoryName(AppExe); } }
         public static string AppFile { get { return Path.GetFileName(AppExe); } }
         public static string SettingsDir { get { return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Heroesprofile"); } }
-        //public static UpdateManager DummyUpdateManager => new UpdateManager(@"not needed here");
-        public bool UpdateAvailable
-        {
-            get {
-                return _updateAvailable;
-            }
-            set {
-                if (_updateAvailable == value) {
-                    return;
-                }
-                _updateAvailable = value;
-                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(UpdateAvailable)));
-            }
-        }
 
         public static Version Version { get { return Assembly.GetExecutingAssembly().GetName().Version; } }
         public string VersionString
@@ -75,17 +51,18 @@ namespace Heroesprofile.Uploader.Windows
         public bool StartWithWindows
         {
             get {
-                // todo: find a way to get shortcut name from UpdateManager instead of hardcoding it
-                return File.Exists(Environment.GetFolderPath(Environment.SpecialFolder.Startup) + @"\Heroesprofile Uploader.lnk");
+                return StartupHelper.IsStartupTaskEnabled();
             }
             set {
-                if (value) {
-                    //DummyUpdateManager.CreateShortcutsForExecutable(AppFile, ShortcutLocation.Startup, false, "--autorun");
+
+                if (value == false) {
+                    StartupHelper.RemoveStartupTask();
                 } else {
-                    //DummyUpdateManager.RemoveShortcutsForExecutable(AppFile, ShortcutLocation.Startup);
+                    StartupHelper.CreateStartupTask();
                 }
             }
         }
+
 
         public readonly Dictionary<string, string> Themes = new Dictionary<string, string> {
             { "Default", null },
@@ -98,15 +75,23 @@ namespace Heroesprofile.Uploader.Windows
         private object _lock = new object();
         public MainWindow mainWindow;
 
+        public App()
+        {
+            Config = new ConfigurationBuilder()
+                .SetBasePath(AppDir)
+                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+                .Build();
+
+            AppConfig = Config.GetSection("AppConfig").Get<AppConfig>();
+        }
+
 
         private void Application_Startup(object sender, StartupEventArgs e)
         {
             ShutdownMode = ShutdownMode.OnExplicitShutdown;
             SetExceptionHandlers();
             _log.Info($"App {VersionString} started");
-            if (Settings.UpgradeRequired) {
-                RestoreSettings();
-            }
+
             SetupTrayIcon();
             Manager = new Manager(new ReplayStorage($@"{SettingsDir}\replays_v8.xml"));
             // Enable collection modification from any thread
@@ -145,30 +130,11 @@ namespace Heroesprofile.Uploader.Windows
                 mainWindow.Show();
             }
             Manager.Start(new Monitor(), new LiveMonitor(), new Analyzer(), new Common.Uploader(), new LiveProcessor(Manager.PreMatchPage));
-
-#pragma warning disable 162
-            if (!NoSquirrel) {
-                //Check for updates on startup and then every hour
-                CheckForUpdates();
-                new DispatcherTimer() {
-                    Interval = TimeSpan.FromHours(1),
-                    IsEnabled = true
-                }.Tick += (_, __) => CheckForUpdates();
-            }
-#pragma warning restore 162
         }
 
         private void Application_Exit(object sender, ExitEventArgs e)
         {
-            BackupSettings();
             TrayIcon?.Dispose();
-#pragma warning disable 162
-            // ReSharper disable HeuristicUnreachableCode
-            if (!NoSquirrel) {
-                //_updateManager?.Dispose();
-            }
-            // ReSharper restore HeuristicUnreachableCode
-#pragma warning restore 162
         }
 
         public void ApplyTheme(string theme)
@@ -212,76 +178,6 @@ namespace Heroesprofile.Uploader.Windows
             };
         }
 
-        private async void CheckForUpdates()
-        {
-            if (Debug || !Settings.AutoUpdate) {
-                return;
-            }
-            try {
-                //if (_updateManager == null) {
-                //    _updateManager = await UpdateManager.GitHubUpdateManager(Settings.UpdateRepository, prerelease: Settings.AllowPreReleases);
-                //}
-                //var release = await _updateManager.UpdateApp();
-                //if (release != null) {
-                //    _log.Info($"Updating app to version {release.Version}");
-                //    UpdateAvailable = true;
-                //    BackupSettings();
-                //}
-            }
-            catch (Exception e) {
-                _log.Warn(e, "Error checking for updates");
-            }
-        }
-
-        /// <summary>
-        /// Make a backup of our settings.
-        /// Used to persist settings across updates.
-        /// </summary>
-        public static void BackupSettings()
-        {
-            Settings.Save();
-            string settingsFile = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.PerUserRoamingAndLocal).FilePath;
-            string destination = $@"{SettingsDir}\last.config";
-            File.Copy(settingsFile, destination, true);
-        }
-
-        /// <summary>
-        /// Restore our settings backup if any.
-        /// Used to persist settings across updates and upgrade settings format.
-        /// </summary>
-        public static void RestoreSettings()
-        {
-            string destFile = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.PerUserRoamingAndLocal).FilePath;
-            string sourceFile = $@"{SettingsDir}\last.config";
-
-            if (File.Exists(sourceFile)) {
-                try {
-                    Directory.CreateDirectory(Path.GetDirectoryName(destFile)); // Create directory if needed
-                    File.Copy(sourceFile, destFile, true);
-                    Settings.Reload();
-                    Settings.Upgrade();
-
-                    if (string.IsNullOrEmpty(Settings.ApplicationVersion)) { // < v1.7
-
-                    } else {
-                        var previous = Version.Parse(Settings.ApplicationVersion);
-
-                        // custom upgrade code
-                    }
-                }
-                catch (Exception e) {
-                    _log.Error(e, "Error upgrading settings");
-                }
-            }
-
-            Settings.ApplicationVersion = Version.ToString();
-            Settings.UpgradeRequired = false;
-            Settings.Save();
-        }
-
-        /// <summary>
-        /// Log all unhandled exceptions
-        /// </summary>
         private void SetExceptionHandlers()
         {
             DispatcherUnhandledException += (o, e) => LogAndDisplay(e.Exception, "dispatcher");

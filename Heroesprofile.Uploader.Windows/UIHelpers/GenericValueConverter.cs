@@ -1,11 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Globalization;
 using System.Windows.Data;
-using System.Windows.Markup;
-using System.Windows;
 
 namespace Heroesprofile.Uploader.Windows.UIHelpers
 {

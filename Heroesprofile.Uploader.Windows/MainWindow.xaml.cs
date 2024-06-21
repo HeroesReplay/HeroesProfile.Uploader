@@ -1,17 +1,16 @@
-﻿using Heroesprofile.Uploader.Windows.Properties;
-
-// using Squirrel;
+﻿// using Squirrel;
 
 using System;
 using System.Diagnostics;
-using System.Reflection;
 using System.Windows;
+using System.Windows.Input;
 
 namespace Heroesprofile.Uploader.Windows
 {
     public partial class MainWindow : Window
     {
-        public App App { get { return Application.Current as App; } }
+        public App App => Application.Current as App;
+
         private bool ShutdownOnClose = true;
 
         public MainWindow()
@@ -22,10 +21,12 @@ namespace Heroesprofile.Uploader.Windows
 
         private void Twitch_Extension_Checkbox_Checked(object sender, RoutedEventArgs e)
         {
+
         }
 
         private void Twitch_Extension_Checkbox_Unchecked(object sender, RoutedEventArgs e)
         {
+
         }
 
         private void Window_StateChanged(object sender, EventArgs e)
@@ -45,7 +46,7 @@ namespace Heroesprofile.Uploader.Windows
             }
         }
 
-        private void Logo_MouseUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        private void Logo_MouseUp(object sender, MouseButtonEventArgs e)
         {
             Process.Start("https://www.heroesprofile.com/");
         }
