@@ -2,11 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
-    <Configurations>Debug;Release</Configurations>
-    <AssemblyName>Heroesprofile.Uploader.Common</AssemblyName>
-    <RootNamespace>Heroesprofile.Uploader.Common</RootNamespace>
-    <Version>1.0.4</Version>
-    <AssemblyVersion>2.4.0</AssemblyVersion>
+    <Configurations>Debug;Release</Configurations>    
   </PropertyGroup>
 
   <ItemGroup>
