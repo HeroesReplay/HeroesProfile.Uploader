@@ -4,7 +4,7 @@ using System;
 using System.IO;
 using System.Reflection;
 
-namespace Heroesprofile.Uploader.Windows
+namespace Heroesprofile.Uploader.Windows.Core
 {
     public class ApplicationDeployment
     {
@@ -18,11 +18,11 @@ namespace Heroesprofile.Uploader.Windows
         {
             get {
                 if (!isNetworkDeployedInitialized) {
-                    bool.TryParse(Environment.GetEnvironmentVariable("ClickOnce_IsNetworkDeployed"), out ApplicationDeployment.isNetworkDeployed);
-                    ApplicationDeployment.isNetworkDeployedInitialized = true;
+                    bool.TryParse(Environment.GetEnvironmentVariable("ClickOnce_IsNetworkDeployed"), out isNetworkDeployed);
+                    isNetworkDeployedInitialized = true;
                 }
 
-                return ApplicationDeployment.isNetworkDeployed;
+                return isNetworkDeployed;
             }
         }
 
@@ -30,11 +30,11 @@ namespace Heroesprofile.Uploader.Windows
         {
             get {
                 if (!currentDeploymentInitialized) {
-                    ApplicationDeployment.currentDeployment = IsNetworkDeployed ? new ApplicationDeployment() : null;
-                    ApplicationDeployment.currentDeploymentInitialized = true;
+                    currentDeployment = IsNetworkDeployed ? new ApplicationDeployment() : null;
+                    currentDeploymentInitialized = true;
                 }
 
-                return ApplicationDeployment.currentDeployment;
+                return currentDeployment;
             }
         }
 

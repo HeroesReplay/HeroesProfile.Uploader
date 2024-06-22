@@ -1,4 +1,4 @@
-﻿namespace Heroesprofile.Uploader.Windows
+﻿namespace Heroesprofile.Uploader.Windows.Core
 {
     public class AppConfig
     {

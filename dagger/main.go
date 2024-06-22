@@ -28,6 +28,13 @@ Well that sucks, it seems like mage is working on windows only. That means we ne
 
 https://learn.microsoft.com/en-us/visualstudio/deployment/quickstart-deploy-using-clickonce-folder?view=vs-2022
 https://learn.microsoft.com/en-us/visualstudio/deployment/building-dotnet-clickonce-applications-from-the-command-line?view=vs-2022
+
+
+How to publish clickonce to Github
+
+https://janjones.me/posts/clickonce-installer-build-publish-github/
+Example: https://github.com/janarez/inoculus
+
 */
 
 // dotnet publish ./Heroesprofile.Uploader.Windows/ --self-contained --os win -o ./publish

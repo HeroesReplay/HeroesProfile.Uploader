@@ -17,7 +17,7 @@ jobs:
     - name: Checkout
       uses: actions/Checkout@v4
       with:
-        submodules: true
+        submodules: 'recursive'
         ref: ${{ github.ref }}
 
     - name: Release

@@ -1,8 +1,10 @@
 ﻿using Heroesprofile.Uploader.Common;
+using Heroesprofile.Uploader.Windows.Core;
 
 using Microsoft.Extensions.Configuration;
 
 using NLog;
+using NLog.Extensions.Logging;
 
 using System;
 using System.Collections.Generic;
@@ -14,15 +16,16 @@ using System.Windows;
 using System.Windows.Data;
 using System.Windows.Forms;
 
-using Application = System.Windows.Application;
 using MessageBox = System.Windows.MessageBox;
 
 namespace Heroesprofile.Uploader.Windows
 {
 
-    public partial class App : Application, INotifyPropertyChanged
+    public partial class App : System.Windows.Application, INotifyPropertyChanged
     {
         public static IConfiguration Config { get; private set; }
+
+        public static Logger _log;
 
         public AppConfig AppConfig { get; private set; }
 
@@ -60,7 +63,7 @@ namespace Heroesprofile.Uploader.Windows
             { "MetroDark", "Themes/MetroDark/MetroDark.Heroesprofile.Implicit.xaml" },
         };
 
-        private static Logger _log = LogManager.GetCurrentClassLogger();
+        
         private static object _lock = new object();
         public MainWindow mainWindow;
 
@@ -70,6 +73,11 @@ namespace Heroesprofile.Uploader.Windows
                 .SetBasePath(AppDir)
                 .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
                 .Build();
+
+
+            LogManager.Configuration = new NLogLoggingConfiguration(Config.GetSection("NLog"));
+            _log = LogManager.GetCurrentClassLogger();
+
 
             AppConfig = Config.GetSection("AppConfig").Get<AppConfig>()!;
 

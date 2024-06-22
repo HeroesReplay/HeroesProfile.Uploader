@@ -1,3 +1,4 @@
 [submodule "Heroes.ReplayParser"]
 	path = Heroes.ReplayParser
-	url = https://github.com/Heroes-Profile/Heroes.ReplayParser
+	url = https://github.com/HeroesReplay/Heroes.ReplayParser.git
+	branch = dotnet-upgrade
