@@ -1,5 +1,4 @@
-﻿using Heroes.ReplayParser;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 
 namespace Heroesprofile.Uploader.Common
 {

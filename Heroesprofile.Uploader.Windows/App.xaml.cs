@@ -4,13 +4,10 @@ using Microsoft.Extensions.Configuration;
 
 using NLog;
 
-// using Squirrel;
-
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
-using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows;
@@ -36,33 +33,27 @@ namespace Heroesprofile.Uploader.Windows
         public NotifyIcon TrayIcon { get; private set; }
         public Manager Manager { get; private set; }
         internal static Properties.Settings Settings => Uploader.Windows.Properties.Settings.Default;
-        public static string AppExe { get { return Assembly.GetExecutingAssembly().Location; } }
-        public static string AppDir { get { return Path.GetDirectoryName(AppExe); } }
-        public static string AppFile { get { return Path.GetFileName(AppExe); } }
-        public static string SettingsDir { get { return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Heroesprofile"); } }
+        public static string AppExe => Assembly.GetExecutingAssembly().Location;
+        public static string AppDir => Path.GetDirectoryName(AppExe);
+        public static string AppFile => Path.GetFileName(AppExe);
+        public static string SettingsDir => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Heroesprofile");
 
-        public static Version Version { get { return Assembly.GetExecutingAssembly().GetName().Version; } }
-        public string VersionString
-        {
-            get {
-                return $"v{Version.Major}.{Version.Minor}" + (Version.Build == 0 ? "" : $".{Version.Build}");
-            }
-        }
+        public static Version Version => Assembly.GetExecutingAssembly().GetName().Version;
+        public string VersionString => $"v{Version.Major}.{Version.Minor}" + (Version.Build == 0 ? "" : $".{Version.Build}");
+        
         public bool StartWithWindows
         {
             get {
                 return StartupHelper.IsStartupTaskEnabled();
             }
             set {
-
-                if (value == false) {
-                    StartupHelper.RemoveStartupTask();
-                } else {
+                if (value) {
                     StartupHelper.CreateStartupTask();
+                } else {
+                    StartupHelper.RemoveStartupTask();
                 }
             }
         }
-
 
         public readonly Dictionary<string, string> Themes = new Dictionary<string, string> {
             { "Default", null },
@@ -70,9 +61,7 @@ namespace Heroesprofile.Uploader.Windows
         };
 
         private static Logger _log = LogManager.GetCurrentClassLogger();
-        //private UpdateManager _updateManager;
-        private bool _updateAvailable;
-        private object _lock = new object();
+        private static object _lock = new object();
         public MainWindow mainWindow;
 
         public App()
@@ -82,7 +71,12 @@ namespace Heroesprofile.Uploader.Windows
                 .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
                 .Build();
 
-            AppConfig = Config.GetSection("AppConfig").Get<AppConfig>();
+            AppConfig = Config.GetSection("AppConfig").Get<AppConfig>()!;
+
+            Settings.WindowHeight = AppConfig.WindowHeight;
+            Settings.WindowWidth = AppConfig.WindowWidth;
+            Settings.WindowLeft = AppConfig.WindowLeft;
+            Settings.WindowTop = AppConfig.WindowTop;
         }
 
 
@@ -99,31 +93,25 @@ namespace Heroesprofile.Uploader.Windows
 
             Manager.PreMatchPage = Settings.PreMatchPage;
             Manager.PostMatchPage = Settings.PostMatchPage;
-
             Manager.DeleteAfterUpload = Settings.DeleteAfterUpload;
 
             ApplyTheme(Settings.Theme);
 
+
             Settings.PropertyChanged += (o, ev) => {
                 if (ev.PropertyName == nameof(Settings.DeleteAfterUpload)) {
                     Manager.DeleteAfterUpload = Settings.DeleteAfterUpload;
-                }
-                if (ev.PropertyName == nameof(Settings.Theme)) {
+                } else if (ev.PropertyName == nameof(Settings.Theme)) {
                     ApplyTheme(Settings.Theme);
-                }
-
-                if (ev.PropertyName == nameof(Settings.PreMatchPage)) {
+                } else if (ev.PropertyName == nameof(Settings.PreMatchPage)) {
                     Manager.PreMatchPage = Settings.PreMatchPage;
-                }
-
-                if (ev.PropertyName == nameof(Settings.PostMatchPage)) {
+                } else if (ev.PropertyName == nameof(Settings.PostMatchPage)) {
                     Manager.PostMatchPage = Settings.PostMatchPage;
                 }
-
             };
 
 
-            if (e.Args.Contains("--autorun") && Settings.MinimizeToTray) {
+            if (Settings.MinimizeToTray) {
                 TrayIcon.Visible = true;
             } else {
                 mainWindow = new MainWindow();
@@ -169,12 +157,18 @@ namespace Heroesprofile.Uploader.Windows
         {
             TrayIcon = new NotifyIcon {
                 Icon = System.Drawing.Icon.ExtractAssociatedIcon(Assembly.GetExecutingAssembly().Location),
-                Visible = false
+                Visible = true
             };
             TrayIcon.Click += (o, e) => {
-                mainWindow = new MainWindow();
-                mainWindow.Show();
-                TrayIcon.Visible = false;
+                if (mainWindow != null) {
+                    mainWindow.Activate();
+                    TrayIcon.Visible = false;
+                    return;
+                } else {
+                    mainWindow = new MainWindow();
+                    mainWindow.Show();
+                    TrayIcon.Visible = false;
+                }
             };
         }
 

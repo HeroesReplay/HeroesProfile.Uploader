@@ -4,7 +4,6 @@ using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
 using System.IO;
-using System.Threading;
 using NLog;
 using Nito.AsyncEx;
 using System.Diagnostics;

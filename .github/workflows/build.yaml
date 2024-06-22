@@ -1,0 +1,24 @@
+name: Build
+on:
+  push:
+    branches:
+        - '**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/Checkout@v4
+      with:
+        submodules: true
+
+    - name: Build Project with Dagger
+      uses: dagger/dagger-for-github@v5.6.0
+      with:
+        version: "latest"
+        verb: call
+        args: build --git=.
+        cloud-token: ${{ secrets.DAGGER_CLOUD_TOKEN }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
