@@ -12,8 +12,9 @@ jobs:
     - name: Checkout
       uses: actions/Checkout@v4
       with:
-        submodules: 'recursive'
+        submodules: 'true'
         ref: ${{ github.ref }}
+        fetch-depth: 0
 
     - name: Build Project with Dagger
       uses: dagger/dagger-for-github@v5.6.0
