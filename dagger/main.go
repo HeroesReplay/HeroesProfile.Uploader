@@ -37,6 +37,7 @@ https://learn.microsoft.com/en-us/visualstudio/deployment/building-dotnet-clicko
 
 func (m *HeroesProfileUploader) ClickOnce(ctx context.Context, git *Directory, version string) *dagger.Container {
 	return m.Publish(ctx, git, version).
+		WithExec([]string{"dotnet", "tool", "install", "microsoft.dotnet.mage", "--global", "--version", "8.0.0"}).
 		WithExec([]string{"/root/.dotnet/tools/dotnet-mage", "-al", "Heroesprofile.Uploader.exe", "-TargetDirectory", "/publish"}).
 		WithExec([]string{"/root/.dotnet/tools/dotnet-mage", "-new", "Application", "-t", "/publish/Heroesprofile.Uploader.manifest", "-FromDirectory", "/publish", "-v", version, "-IconFile", "/publish/Resources/uploader_icon_dark.ico"}).
 		WithExec([]string{"/root/.dotnet/tools/dotnet-mage", "-new", "Deployment", "-Install", "true", "-Publisher", "Patrick Magee", "-v", version, "-AppManifest", "/publish/Heroesprofile.Uploader.manifest", "-t", "Heroesprofile.Uploader.application"})
@@ -45,7 +46,6 @@ func (m *HeroesProfileUploader) ClickOnce(ctx context.Context, git *Directory, v
 func (m *HeroesProfileUploader) Publish(ctx context.Context, git *Directory, version string) *dagger.Container {
 	return m.Build(ctx, git).
 		WithWorkdir("/src").
-		WithExec([]string{"dotnet", "tool", "install", "microsoft.dotnet.mage", "--global", "--version", "8.0.0"}).
 		WithExec([]string{"mkdir", "/publish"}).
 		WithExec([]string{"dotnet", "publish", "Heroesprofile.Uploader.Windows", "--self-contained", "--os", "win", "-o", "/publish"})
 }
@@ -57,7 +57,7 @@ func (m *HeroesProfileUploader) Release(
 	token *dagger.Secret) error {
 
 	version := strings.TrimPrefix(tag, "v")
-	publish := m.Publish(ctx, git.Directory("src"), version)
+	publish := m.Publish(ctx, git, version)
 	assets := publish.Directory("/publish")
 
 	// fileNames, _ := assets.Entries(ctx)

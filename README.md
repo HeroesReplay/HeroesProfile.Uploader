@@ -6,7 +6,31 @@ Uploads Heroes of the Storm replays to [https://heroesprofile.com](https://www.h
 
 ## Installation
 
-* Requires .NET 8 Desktop Runtime
+* Unzip the latest release and run `Heroesprofile.Uploader.exe`
+
+
+## Dagger
+
+To build the project
+
+```sh
+dagger call build --git=. stdout
+```
+
+To publish the project
+
+```sh
+dagger call publish --git=. --version=1.0.0.0 directory --path /publish export --path ./out
+
+```
+
+To release from your local machine, you need to have a GitHub token with `repo` scope and set it as an environment variable.
+
+```sh
+dagger call release --git=. --tag=v1.0.0 --token=env:GITHUB_TOKEN
+```
+
+
 
 ## Contributing
 
