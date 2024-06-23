@@ -1,6 +1,8 @@
-﻿// using Squirrel;
+﻿using Heroesprofile.Uploader.Common;
+using Heroesprofile.Uploader.Windows.Core;
 
 using System;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Input;
@@ -9,40 +11,45 @@ namespace Heroesprofile.Uploader.Windows
 {
     public partial class MainWindow : Window
     {
-        public App App => Application.Current as App;
+        public string VersionString => App.Current.VersionString;
 
-        private bool ShutdownOnClose = true;
+        public UserSettings UserSettings => App.Current.UserSettings;
+
+        public ObservableCollectionEx<ReplayFile> Files => App.Current.Manager.Files;
+
+        public Manager Manager => App.Current.Manager;
+
+        public bool StartWithWindows
+        {
+            get => App.Current.StartWithWindows;
+            set => App.Current.StartWithWindows = value;
+        }
+
 
         public MainWindow()
         {
             InitializeComponent();
+            DataContext = this;
 
+            
         }
 
-        private void Twitch_Extension_Checkbox_Checked(object sender, RoutedEventArgs e)
-        {
-
-        }
-
-        private void Twitch_Extension_Checkbox_Unchecked(object sender, RoutedEventArgs e)
-        {
-
-        }
 
         private void Window_StateChanged(object sender, EventArgs e)
         {
-            if (App.Settings.MinimizeToTray && WindowState == WindowState.Minimized) {
-                App.TrayIcon.Visible = true;
-                ShutdownOnClose = false;
-                Close();
+            if (App.Current.UserSettings.MinimizeToTray) {
+                if (WindowState == WindowState.Minimized) {
+                    Hide();
+                }
             }
         }
 
         private void Window_Closed(object sender, EventArgs e)
         {
-            App.mainWindow = null;
-            if (ShutdownOnClose) {
-                App.Shutdown();
+            if (App.Current.UserSettings.MinimizeToTray) {
+                
+            } else {
+                App.Current.Shutdown();
             }
         }
 
@@ -53,25 +60,13 @@ namespace Heroesprofile.Uploader.Windows
 
         private void ShowLog_Click(object sender, RoutedEventArgs e)
         {
-            Process.Start("explorer.exe", $@"{App.SettingsDir}\logs");
+            Process.Start("explorer.exe", $@"{App.Current.SettingsDir}\logs");
         }
 
         private void Settings_Click(object sender, RoutedEventArgs e)
         {
             var settings = new SettingsWindow() { Owner = this, DataContext = this };
             settings.ShowDialog();
-
-        }
-
-        private async void Restart_Click(object sender, RoutedEventArgs e)
-        {
-            // Actually this should never happen when squirrel is disabled
-#pragma warning disable 162
-            //if (!App.NoSquirrel) {
-            //    await UpdateManager.RestartAppWhenExited();
-            //}
-#pragma warning restore 162
-            App.Shutdown();
         }
     }
 }

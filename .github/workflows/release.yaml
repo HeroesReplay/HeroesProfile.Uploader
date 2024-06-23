@@ -1,33 +1,69 @@
-name: Release (dagger)
+name: release
+
+# Workflow with Windows & Linux
+# This is so we can use dotnet mage to build the manifests
+
+permissions:
+  pages: write
+  contents: write
+  id-token: write
+  deployments: write
 
 on:
   push:
     tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+'
+      - "v[0-9]+.[0-9]+.[0-9]+"
 
-permissions:
-  contents: write
-  packages: write  
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
 
 jobs:
-  release:
-    if: false # This condition disables the job. Change to `true` or remove to enable.
-    runs-on: ubuntu-latest
-
+  publish:
+    runs-on: windows-latest
     steps:
-    - name: Checkout
-      uses: actions/Checkout@v4
-      with:
-        submodules: 'true'
-        ref: ${{ github.ref }}
-        fetch-depth: 0
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          submodules: "true"
+          fetch-depth: 0
+          ref: ${{ github.ref }}
 
-    - name: Release
-      uses: dagger/dagger-for-github@v5.6.0
-      with:
-        version: "latest"
-        verb: call
-        args: release --git=. --tag=${{ github.ref_name }} --token=env:GITHUB_TOKEN
-        cloud-token: ${{ secrets.DAGGER_CLOUD_TOKEN }}
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Setup .NET 8 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Run release script
+        run: .\dotnet-mage-release.ps1
+        continue-on-error: false
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: ./Heroesprofile.Uploader.Windows/bin/publish
+          keep_files: true
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: published
+          path: .\Heroesprofile.Uploader.Windows\bin\publish
+          if-no-files-found: error
+          retention-days: 1
+          overwrite: true
+
+      - name: Release to GitHub
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: "./Heroesprofile.Uploader.Windows/bin/publish/**"
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ github.ref }}
+          allowUpdates: true
+          makeLatest: true
+          replacesArtifacts: true
+          generateReleaseNotes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

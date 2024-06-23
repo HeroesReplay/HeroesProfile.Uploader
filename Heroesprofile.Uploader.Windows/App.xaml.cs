@@ -1,4 +1,6 @@
-﻿using Heroesprofile.Uploader.Common;
+﻿using H.NotifyIcon;
+
+using Heroesprofile.Uploader.Common;
 using Heroesprofile.Uploader.Windows.Core;
 
 using Microsoft.Extensions.Configuration;
@@ -8,42 +10,48 @@ using NLog.Extensions.Logging;
 
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.IO;
 using System.Reflection;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Data;
-using System.Windows.Forms;
-
-using MessageBox = System.Windows.MessageBox;
 
 namespace Heroesprofile.Uploader.Windows
 {
-
-    public partial class App : System.Windows.Application, INotifyPropertyChanged
+    public partial class App : Application
     {
-        public static IConfiguration Config { get; private set; }
+        public new static App Current => (App) Application.Current;
 
-        public static Logger _log;
 
-        public AppConfig AppConfig { get; private set; }
+        private static object _lock = new object();
 
-        public static bool StartWithWindowsCheckboxEnabled => true;
+        public IConfiguration Config { get; private set; }
 
-        public event PropertyChangedEventHandler PropertyChanged;
+        public Logger _log;
+        
+        public UserSettings UserSettings { get; private set; }
+        public AppSettings AppSettings { get; private set; }
 
-        public NotifyIcon TrayIcon { get; private set; }
+        private SettingsManager<UserSettings> settingsManager;
+
+        public TaskbarIcon TaskbarIcon { get; private set; }
         public Manager Manager { get; private set; }
-        internal static Properties.Settings Settings => Uploader.Windows.Properties.Settings.Default;
-        public static string AppExe => Assembly.GetExecutingAssembly().Location;
-        public static string AppDir => Path.GetDirectoryName(AppExe);
-        public static string AppFile => Path.GetFileName(AppExe);
-        public static string SettingsDir => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Heroesprofile");
+        
+        public string SettingsDir => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Heroesprofile");
 
-        public static Version Version => Assembly.GetExecutingAssembly().GetName().Version;
-        public string VersionString => $"v{Version.Major}.{Version.Minor}" + (Version.Build == 0 ? "" : $".{Version.Build}");
+        public Version Version
+        {
+            get {
+                if (ApplicationDeployment.IsNetworkDeployed) {
+                    return ApplicationDeployment.CurrentDeployment.CurrentVersion;
+                }
+
+                return Assembly.GetExecutingAssembly().GetName().Version;
+            }
+        }
+
+        public string VersionString => $"v{Version}";
 
         public bool StartWithWindows
         {
@@ -64,28 +72,23 @@ namespace Heroesprofile.Uploader.Windows
             { "MetroDark", "Themes/MetroDark/MetroDark.Heroesprofile.Implicit.xaml" },
         };
 
-
-        private static object _lock = new object();
-        public MainWindow mainWindow;
-
-        public App()
+       public App()
         {
             Config = new ConfigurationBuilder()
-                .SetBasePath(AppDir)
+                .SetBasePath(Directory.GetCurrentDirectory())
                 .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
                 .Build();
 
+            settingsManager = new SettingsManager<UserSettings>(Path.Combine(SettingsDir, "userSettings.json"));
+            UserSettings = settingsManager.LoadSettings();
+            AppSettings = Config.GetSection(nameof(AppSettings)).Get<AppSettings>()!;
+
+            if (UserSettings == null) {
+                UserSettings = new UserSettings(AppSettings);
+            }
 
             LogManager.Configuration = new NLogLoggingConfiguration(Config.GetSection("NLog"));
             _log = LogManager.GetCurrentClassLogger();
-
-
-            AppConfig = Config.GetSection("AppConfig").Get<AppConfig>()!;
-
-            Settings.WindowHeight = AppConfig.WindowHeight;
-            Settings.WindowWidth = AppConfig.WindowWidth;
-            Settings.WindowLeft = AppConfig.WindowLeft;
-            Settings.WindowTop = AppConfig.WindowTop;
 
             if (ApplicationDeployment.IsNetworkDeployed) {
                 _log.Info(JsonSerializer.Serialize(ApplicationDeployment.CurrentDeployment));
@@ -106,38 +109,38 @@ namespace Heroesprofile.Uploader.Windows
             // Enable collection modification from any thread
             BindingOperations.EnableCollectionSynchronization(Manager.Files, _lock);
 
-            Manager.PreMatchPage = Settings.PreMatchPage;
-            Manager.PostMatchPage = Settings.PostMatchPage;
-            Manager.DeleteAfterUpload = Settings.DeleteAfterUpload;
+            Manager.PreMatchPage = UserSettings.PreMatchPage;
+            Manager.PostMatchPage = UserSettings.PostMatchPage;
+            Manager.DeleteAfterUpload = DeleteFiles.None;
 
-            ApplyTheme(Settings.Theme);
+            ApplyTheme(AppSettings.Theme);
 
+            UserSettings.PropertyChanged += (o, ev) => {             
 
-            Settings.PropertyChanged += (o, ev) => {
-                if (ev.PropertyName == nameof(Settings.DeleteAfterUpload)) {
-                    Manager.DeleteAfterUpload = Settings.DeleteAfterUpload;
-                } else if (ev.PropertyName == nameof(Settings.Theme)) {
-                    ApplyTheme(Settings.Theme);
-                } else if (ev.PropertyName == nameof(Settings.PreMatchPage)) {
-                    Manager.PreMatchPage = Settings.PreMatchPage;
-                } else if (ev.PropertyName == nameof(Settings.PostMatchPage)) {
-                    Manager.PostMatchPage = Settings.PostMatchPage;
+                if (ev.PropertyName == nameof(UserSettings.PreMatchPage)) {
+                    Manager.PreMatchPage = UserSettings.PreMatchPage;
+                } else if (ev.PropertyName == nameof(UserSettings.PostMatchPage)) {
+                    Manager.PostMatchPage = UserSettings.PostMatchPage;
                 }
+
+                settingsManager.SaveSettings(UserSettings);
             };
 
-
-            if (Settings.MinimizeToTray) {
-                TrayIcon.Visible = true;
+            if (StartWithWindows) {
+                // TODO: running in the background
             } else {
-                mainWindow = new MainWindow();
-                mainWindow.Show();
+                MainWindow = new MainWindow();
+                MainWindow.Deactivated += (o, ev) => {
+                    // TODO: TrayIcon.Visible = true;
+                };
+                MainWindow.Show();
             }
             Manager.Start(new Monitor(), new LiveMonitor(), new Analyzer(), new Common.Uploader(), new LiveProcessor(Manager.PreMatchPage));
         }
 
         private void Application_Exit(object sender, ExitEventArgs e)
         {
-            TrayIcon?.Dispose();
+            TaskbarIcon?.Dispose();
         }
 
         public void ApplyTheme(string theme)
@@ -154,37 +157,20 @@ namespace Heroesprofile.Uploader.Windows
         }
 
         public void Activate()
-        {
-            if (mainWindow != null) {
-                if (mainWindow.WindowState == WindowState.Minimized) {
-                    mainWindow.WindowState = WindowState.Normal;
-                }
-                mainWindow.Activate();
-            } else {
-                mainWindow = new MainWindow();
-                mainWindow.Show();
-                mainWindow.WindowState = WindowState.Normal;
-                TrayIcon.Visible = false;
-            }
+        {   
+            MainWindow = new MainWindow();
+            MainWindow.Activate();
+            MainWindow.WindowState = WindowState.Normal;
+            MainWindow.Show();
+
+            // 
+            // TaskbarIcon.Visible = false;
         }
 
         private void SetupTrayIcon()
         {
-            TrayIcon = new NotifyIcon {
-                Icon = System.Drawing.Icon.ExtractAssociatedIcon(Assembly.GetExecutingAssembly().Location),
-                Visible = true
-            };
-            TrayIcon.Click += (o, e) => {
-                if (mainWindow != null) {
-                    mainWindow.Activate();
-                    TrayIcon.Visible = false;
-                    return;
-                } else {
-                    mainWindow = new MainWindow();
-                    mainWindow.Show();
-                    TrayIcon.Visible = false;
-                }
-            };
+            TaskbarIcon = (TaskbarIcon)FindResource("NotifyIcon");
+            TaskbarIcon.ForceCreate();
         }
 
         private void SetExceptionHandlers()

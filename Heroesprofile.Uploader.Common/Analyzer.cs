@@ -15,10 +15,6 @@ namespace Heroesprofile.Uploader.Common
 
         private static Logger _log = LogManager.GetCurrentClassLogger();
 
-        /// <summary>
-        /// Analyze replay locally before uploading
-        /// </summary>
-        /// <param name="file">Replay file</param>
         public Replay Analyze(ReplayFile file)
         {
             try {
@@ -89,29 +85,22 @@ namespace Heroesprofile.Uploader.Common
             return null;
         }
 
-        /// <summary>
-        /// Get unique hash of replay. Compatible with HotsLogs
-        /// </summary>
-        /// <param name="replay"></param>
-        /// <returns></returns>
         public string GetFingerprint(Replay replay)
         {
             var str = new StringBuilder();
             replay.Players.Select(p => p.BattleNetId).OrderBy(x => x).Map(x => str.Append(x.ToString()));
             str.Append(replay.RandomValue);
-            var md5 = MD5.Create().ComputeHash(Encoding.UTF8.GetBytes(str.ToString()));
+            var md5 = MD5.HashData(Encoding.UTF8.GetBytes(str.ToString()));
             var result = new Guid(md5);
             return result.ToString();
         }
 
-        /// <summary>
-        /// Swaps two bytes in a byte array
-        /// </summary>
-        private void SwapBytes(byte[] buf, int i, int j)
-        {
-            byte temp = buf[i];
-            buf[i] = buf[j];
-            buf[j] = temp;
-        }
+
+        //private void SwapBytes(byte[] buf, int i, int j)
+        //{
+        //    byte temp = buf[i];
+        //    buf[i] = buf[j];
+        //    buf[j] = temp;
+        //}
     }
 }

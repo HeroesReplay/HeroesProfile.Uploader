@@ -1,27 +1,27 @@
-name: Build (dagger)
+name: build
+
 on:
   push:
     branches:
-        - '**'
+      - "**"
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout
-      uses: actions/Checkout@v4
-      with:
-        submodules: 'true'
-        ref: ${{ github.ref }}
-        fetch-depth: 0
-
-    - name: Build Project with Dagger
-      uses: dagger/dagger-for-github@v5.6.0
-      with:
-        version: "latest"
-        verb: call
-        args: build --git=. stdout
-        cloud-token: ${{ secrets.DAGGER_CLOUD_TOKEN }}
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Checkout
+        uses: actions/Checkout@v4
+        with:
+          submodules: "true"
+          ref: ${{ github.ref }}
+          fetch-depth: 0
+      - name: Build Project with Dagger
+        uses: dagger/dagger-for-github@v5.6.0
+        with:
+          version: "latest"
+          verb: call
+          args: build --git=. stdout
+          cloud-token: ${{ secrets.DAGGER_CLOUD_TOKEN }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

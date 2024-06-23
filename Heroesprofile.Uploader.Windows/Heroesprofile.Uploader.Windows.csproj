@@ -1,12 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <TargetFramework>net8.0-windows</TargetFramework>
-        <RuntimeIdentifier>win-x64</RuntimeIdentifier>
         <OutputType>WinExe</OutputType>
         <AssemblyName>Heroesprofile.Uploader</AssemblyName>
-        <UseWindowsForms>true</UseWindowsForms>
         <UseWPF>true</UseWPF>
+        <PublishSingleFile>true</PublishSingleFile>
         <EnableWindowsTargeting>true</EnableWindowsTargeting>
+        <ApplicationIcon>Resources/uploader_icon_dark.ico</ApplicationIcon>
+        <StartupObject>Heroesprofile.Uploader.Windows.App</StartupObject>
+        <Nullable>enable</Nullable>
     </PropertyGroup>
     <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
         <DefineConstants>TRACE;DEBUG</DefineConstants>
@@ -14,10 +16,10 @@
     <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
         <DefineConstants>TRACE</DefineConstants>
     </PropertyGroup>
-    <PropertyGroup>
-        <ApplicationIcon>Resources/uploader_icon_dark.ico</ApplicationIcon>
-        <StartupObject>Heroesprofile.Uploader.Windows.App</StartupObject>
-        <Nullable>enable</Nullable>
+
+    <PropertyGroup Condition="'$(Configuration)'=='Release'">
+        <DebugSymbols>False</DebugSymbols>
+        <DebugType>None</DebugType>
     </PropertyGroup>
 
     <ItemGroup>
@@ -25,13 +27,14 @@
     </ItemGroup>
 
     <ItemGroup>
+        <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
+        <PackageReference Include="H.NotifyIcon.Wpf" Version="2.0.131" />
         <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="8.0.1" />
         <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.0.0" />
         <PackageReference Include="NLog.Extensions.Logging" Version="5.3.11" />
         <PackageReference Include="Splat" Version="15.1.1" />
         <PackageReference Include="System.Configuration.ConfigurationManager" Version="8.0.0" />
         <PackageReference Include="System.Data.DataSetExtensions" Version="4.5.0" />
-        <PackageReference Include="TaskScheduler" Version="2.11.0" />
         <PackageReference Include="GitVersion.MsBuild" Version="5.12.0">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -42,19 +45,15 @@
         <Content Include="appsettings.json">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </Content>
-        <Compile Update="Properties\Settings.Designer.cs">
-            <DesignTimeSharedInput>True</DesignTimeSharedInput>
-            <AutoGen>True</AutoGen>
-            <DependentUpon>Settings.settings</DependentUpon>
-        </Compile>
-        <None Update="Properties\Settings.settings">
-            <Generator>SettingsSingleFileGenerator</Generator>
-            <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+        <Content Include="icon.ico">
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-        </None>
+        </Content>
     </ItemGroup>
 
     <ItemGroup>
+        <Resource Include="Resources\heroesprofilelogo.png">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </Resource>
         <Resource Include="Resources\uploader_dark.png">
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </Resource>
@@ -65,6 +64,12 @@
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </Resource>
         <Resource Update="Resources\uploader_icon_dark.ico">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </Resource>
+        <Resource Include="Resources\uploader_icon_dark.ico">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </Resource>
+        <Resource Include="Resources\uploader_icon_light.ico">
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </Resource>
     </ItemGroup>

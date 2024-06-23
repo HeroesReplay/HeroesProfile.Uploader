@@ -2,9 +2,12 @@
 
 namespace Heroesprofile.Uploader.Windows.Core
 {
+
     /*
      * https://learn.microsoft.com/en-us/visualstudio/deployment/debugging-clickonce-applications-that-use-system-deployment-application?view=vs-2019
      * https://learn.microsoft.com/en-us/visualstudio/deployment/access-clickonce-deployment-properties-dotnet?view=vs-2022&viewFallbackFrom=vs-2019
+     * https://learn.microsoft.com/en-us/visualstudio/deployment/clickonce-deployment-dotnet?view=vs-2022#applicationdeployment-class
+     * Starting in .NET 7, you can access properties in the ApplicationDeployment class using environment variables. For more information, see Access ClickOnce deployment properties in .NET.
      */
     public class ApplicationDeployment
     {
@@ -33,7 +36,7 @@ namespace Heroesprofile.Uploader.Windows.Core
             }
         }
 
-        public static ApplicationDeployment CurrentDeployment
+        public static ApplicationDeployment? CurrentDeployment
         {
             get {
                 if (!currentDeploymentInitialized) {
