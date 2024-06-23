@@ -1,4 +1,4 @@
-name: Deploy
+name: ClickOnce Release v1
 
 on:
   push:
@@ -12,9 +12,14 @@ permissions:
 
 jobs:
   release:
+    if: false # This condition disables the job. Change to `true` or remove to enable.
     runs-on: windows-latest
+    environment: 
+      name: github-pages
+      url: https://heroesreplay.github.io/HeroesProfile.Uploader/
 
     steps:
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:
@@ -30,17 +35,29 @@ jobs:
       - name: Install dotnet-mage
         run: dotnet tool install --global microsoft.dotnet.mage --version 8.0.0
 
-      - name: Build and Publish
-        run: |
-
-          $version = "${{ github.ref }}"
+      - name: Prepare version and publish directory
+        id: version
+        run: | 
+          $version = "${{ github.ref }}" -replace "refs/tags/v", ""
           $publishDir = ".\publish\$version"
-          echo "PUBLISH_DIR=$publishDir" >> $GITHUB_ENV
+          echo "APP_PUBLISH_DIR=$publishDir" >> $GITHUB_ENV
+          echo "APP_VERSION=$version" >> $GITHUB_ENV
 
+      - name: Publish application
+        run: |
           dotnet publish .\Heroesprofile.Uploader.Windows `
             --self-contained `
             --os win `
-            -o $publishDir
+            -o $env:PUBLISH_DIR
+        env:
+          APP_PUBLISH_DIR: ${{ env.APP_PUBLISH_DIR }}
+          APP_VERSION: ${{ env.APP_VERSION }}
+
+      - name: ClickOnce manifest and application
+        run: |
+
+          $publishDir = $env:APP_PUBLISH_DIR
+          $version = $env:APP_VERSION
 
           dotnet mage -al Heroesprofile.Uploader.exe `
             -TargetDirectory $publishDir
@@ -48,16 +65,20 @@ jobs:
           dotnet mage -new Application `
             -ToFile $publishDir\Heroesprofile.Uploader.manifest `
             -FromDirectory $publishDir `
-            -Version ${{ github.ref_name }} `
+            -Version $version `
             -IconFile .\Heroesprofile.Uploader.Windows\Resources\uploader_icon_dark.ico
 
           dotnet mage -new Deployment `
             -Install true `
             -Publisher "Patrick Magee" `
-            -Version ${{ github.ref_name }} `
+            -Version $version `
             -AppManifest $publishDir\Heroesprofile.Uploader.manifest `
             -ToFile Heroesprofile.Uploader.application `
             -ProviderUrl https://heroesreplay.github.io/HeroesProfile.Uploader/
+
+        env:
+          APP_PUBLISH_DIR: ${{ env.APP_PUBLISH_DIR }}
+          APP_VERSION: ${{ env.APP_VERSION }}
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
@@ -68,9 +89,10 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ${{ env.PUBLISH_DIR }}
+          path: ${{ env.APP_PUBLISH_DIR }}
         env:
-          PUBLISH_DIR: ${{ env.PUBLISH_DIR }}
+          APP_PUBLISH_DIR: ${{ env.APP_PUBLISH_DIR }}
+          APP_VERSION: ${{ env.APP_VERSION }}
 
       - name: Deploy to GitHub Pages
         id: deployment

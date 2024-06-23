@@ -1,4 +1,4 @@
-name: Release
+name: Release (dagger)
 
 on:
   push:
@@ -11,6 +11,7 @@ permissions:
 
 jobs:
   release:
+    if: false # This condition disables the job. Change to `true` or remove to enable.
     runs-on: ubuntu-latest
 
     steps:
