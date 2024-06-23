@@ -78,7 +78,7 @@
         <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
       </dsig:Transforms>
       <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
-      <dsig:DigestValue>XZx72g8QWJqaU6S2X00OYTFBIEFAU+FX6gLJubkSCdM=</dsig:DigestValue>
+      <dsig:DigestValue>gxDk7fbah1UMg9u+ykGmlELgJzAaoSwjspHd0XQ3wwc=</dsig:DigestValue>
     </hash>
   </file>
   <file name="Heroesprofile.Uploader.exe" size="4334119">
@@ -87,7 +87,7 @@
         <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
       </dsig:Transforms>
       <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
-      <dsig:DigestValue>W6qtAaXUIStD3mseiIVJbJihpm1Z3NA9bjFC+F0I3Mw=</dsig:DigestValue>
+      <dsig:DigestValue>4MjVY1wBMfclHs677NEXKtlbeVur48P3E/Ii3lfgqrw=</dsig:DigestValue>
     </hash>
   </file>
   <file name="Heroesprofile.Uploader.pdb" size="36520">
@@ -96,7 +96,7 @@
         <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
       </dsig:Transforms>
       <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
-      <dsig:DigestValue>hPrAlfSPJSxD80CkgaL17XrWwptKvXdyjmEVGdnHzCQ=</dsig:DigestValue>
+      <dsig:DigestValue>bhiwVYWwn03h5cDBmJmgM3kK4gdD6GPtBrT+MuTBdcs=</dsig:DigestValue>
     </hash>
   </file>
   <file name="icon.ico" size="43852">
