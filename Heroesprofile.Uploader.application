@@ -14,14 +14,14 @@
     <framework targetVersion="4.5" profile="Full" supportedRuntime="4.0.30319" />
   </compatibleFrameworks>
   <dependency>
-    <dependentAssembly dependencyType="install" codebase="Heroesprofile.Uploader.manifest" size="5203">
+    <dependentAssembly dependencyType="install" codebase="Heroesprofile.Uploader.manifest" size="5566">
       <assemblyIdentity name="Heroes Profile Uploader.exe" version="2.0.0.0" publicKeyToken="0000000000000000" language="neutral" processorArchitecture="msil" type="win32" />
       <hash>
         <dsig:Transforms>
           <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
         </dsig:Transforms>
         <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
-        <dsig:DigestValue>s5H00YOSCqDjvEsG1dfH1NWYfJwL6caWB65+tQqLQZQ=</dsig:DigestValue>
+        <dsig:DigestValue>UcwaeEAungf9ee/1givNZRBe5Y2j64Y31bYOi+T7kS4=</dsig:DigestValue>
       </hash>
     </dependentAssembly>
   </dependency>
