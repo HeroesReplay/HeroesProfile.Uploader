@@ -47,12 +47,12 @@ try {
     }
     & $msBuildPath /target:publish /p:PublishProfile=ClickOnceProfile `
         /p:ApplicationVersion=$version /p:Configuration=Release `
-        /p:PublishDir=$publishDir /p:PublishUrl=$publishDir `
+        /p:PublishDir=$publishDir /p:PublishUrl=https://heroesreplay.github.io/HeroesProfile.Uploader/ `
+        /p:GenerateManifests=true `
         $msBuildVerbosityArg
 
     # Measure publish size.
-    $publishSize = (Get-ChildItem -Path "$publishDir/Application Files" -Recurse |
-        Measure-Object -Property Length -Sum).Sum / 1Mb
+    $publishSize = (Get-ChildItem -Path "$publishDir/Application Files" -Recurse | Measure-Object -Property Length -Sum).Sum / 1Mb
     Write-Output ("Published size: {0:N2} MB" -f $publishSize)
 }
 finally {
@@ -66,12 +66,13 @@ if ($OnlyBuild) {
 
 # Clone `gh-pages` branch.
 $ghPagesDir = "gh-pages"
+
 if (-Not (Test-Path $ghPagesDir)) {
-    git clone $(git config --get remote.origin.url) -b gh-pages `
-        --depth 1 --single-branch $ghPagesDir
+    git clone $(git config --get remote.origin.url) -b gh-pages --depth 1 --single-branch $ghPagesDir
 }
 
 Push-Location $ghPagesDir
+
 try {
     # Remove previous application files.
     Write-Output "Removing previous files..."
@@ -84,8 +85,7 @@ try {
 
     # Copy new application files.
     Write-Output "Copying new files..."
-    Copy-Item -Path "../$outDir/Application Files", "../$outDir/$appName.application" `
-        -Destination . -Recurse
+    Copy-Item -Path "../$outDir/Application Files", "../$outDir/$appName.application" -Destination . -Recurse
 
     # Stage and commit.
     Write-Output "Staging..."

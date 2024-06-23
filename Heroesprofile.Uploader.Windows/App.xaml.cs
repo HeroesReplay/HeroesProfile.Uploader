@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Reflection;
+using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Data;
@@ -43,17 +44,17 @@ namespace Heroesprofile.Uploader.Windows
 
         public static Version Version => Assembly.GetExecutingAssembly().GetName().Version;
         public string VersionString => $"v{Version.Major}.{Version.Minor}" + (Version.Build == 0 ? "" : $".{Version.Build}");
-        
+
         public bool StartWithWindows
         {
             get {
-                return StartupHelper.IsStartupTaskEnabled();
+                return StartupHelper.IsStartupEnabled();
             }
             set {
                 if (value) {
-                    StartupHelper.CreateStartupTask();
+                    StartupHelper.Add();
                 } else {
-                    StartupHelper.RemoveStartupTask();
+                    StartupHelper.Remove();
                 }
             }
         }
@@ -63,7 +64,7 @@ namespace Heroesprofile.Uploader.Windows
             { "MetroDark", "Themes/MetroDark/MetroDark.Heroesprofile.Implicit.xaml" },
         };
 
-        
+
         private static object _lock = new object();
         public MainWindow mainWindow;
 
@@ -85,6 +86,12 @@ namespace Heroesprofile.Uploader.Windows
             Settings.WindowWidth = AppConfig.WindowWidth;
             Settings.WindowLeft = AppConfig.WindowLeft;
             Settings.WindowTop = AppConfig.WindowTop;
+
+            if (ApplicationDeployment.IsNetworkDeployed) {
+                _log.Info(JsonSerializer.Serialize(ApplicationDeployment.CurrentDeployment));
+            } else {
+                _log.Info("Not network deployed");
+            }
         }
 
 
