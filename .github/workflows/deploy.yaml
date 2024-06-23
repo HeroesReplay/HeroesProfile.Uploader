@@ -1,0 +1,83 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - dotnet-upgrade
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version (e.g., 1.0.0)'
+        required: true
+        default: '1.0.0'
+
+jobs:
+  release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+          submodules: 'true'
+          fetch-depth: 0
+
+      - name: Setup .NET 8 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Install dotnet-mage
+        run: dotnet tool install --global microsoft.dotnet.mage --version 8.0.0
+
+      - name: Build and Publish
+        run: |
+
+          $version = "${{ github.event.inputs.version }}"
+          $publishDir = ".\publish\$version"
+          echo "PUBLISH_DIR=$publishDir" >> $GITHUB_ENV
+
+          dotnet publish .\Heroesprofile.Uploader.Windows `
+            --self-contained `
+            --os win `
+            -o $publishDir
+
+          dotnet mage -al Heroesprofile.Uploader.exe `
+            -TargetDirectory $publishDir
+
+          dotnet mage -new Application `
+            -ToFile $publishDir\Heroesprofile.Uploader.manifest `
+            -FromDirectory $publishDir `
+            -Version ${{ github.ref_name }} `
+            -IconFile .\Heroesprofile.Uploader.Windows\Resources\uploader_icon_dark.ico
+
+          dotnet mage -new Deployment `
+            -Install true `
+            -Publisher "Patrick Magee" `
+            -Version ${{ github.ref_name }} `
+            -AppManifest $publishDir\Heroesprofile.Uploader.manifest `
+            -ToFile Heroesprofile.Uploader.application `
+            -ProviderUrl https://heroesreplay.github.io/HeroesProfile.Uploader/
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ${{ env.PUBLISH_DIR }}
+        env:
+          PUBLISH_DIR: ${{ env.PUBLISH_DIR }}
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Create Release and Upload Assets
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ${{ env.PUBLISH_DIR }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          PUBLISH_DIR: ${{ env.PUBLISH_DIR }}
