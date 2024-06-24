@@ -30,32 +30,11 @@ namespace Heroesprofile.Uploader.Windows
         {
             InitializeComponent();
             DataContext = this;
-
-            
-        }
-
-
-        private void Window_StateChanged(object sender, EventArgs e)
-        {
-            if (App.Current.UserSettings.MinimizeToTray) {
-                if (WindowState == WindowState.Minimized) {
-                    Hide();
-                }
-            }
         }
 
         private void Window_Closed(object sender, EventArgs e)
         {
-            if (App.Current.UserSettings.MinimizeToTray) {
-                
-            } else {
-                App.Current.Shutdown();
-            }
-        }
-
-        private void Logo_MouseUp(object sender, MouseButtonEventArgs e)
-        {
-            Process.Start("https://www.heroesprofile.com/");
+            App.Current.Shutdown();
         }
 
         private void ShowLog_Click(object sender, RoutedEventArgs e)
@@ -67,6 +46,27 @@ namespace Heroesprofile.Uploader.Windows
         {
             var settings = new SettingsWindow() { Owner = this, DataContext = this };
             settings.ShowDialog();
+        }
+
+        private void Window_Closing(object sender, CancelEventArgs e)
+        {
+            if (App.Current.UserSettings.MinimizeToTray) {
+                e.Cancel = true;
+                Hide();
+            }
+        }
+
+        private void Window_Deactivated(object sender, EventArgs e)
+        {
+            if (App.Current.UserSettings.MinimizeToTray) {
+                Hide();
+            }                
+        }
+
+        private void Hyperlink_RequestNavigate(object sender, System.Windows.Navigation.RequestNavigateEventArgs e)
+        {
+            Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
+            e.Handled = true;
         }
     }
 }

@@ -6,8 +6,8 @@
         xmlns:local="clr-namespace:Heroesprofile.Uploader.Windows"
         xmlns:helpers="clr-namespace:Heroesprofile.Uploader.Windows.UIHelpers"
         xmlns:heroesprofile="clr-namespace:Heroesprofile.Uploader.Common;assembly=Heroesprofile.Uploader.Common"
-        mc:Ignorable="d"        
-        StateChanged="Window_StateChanged" Closed="Window_Closed"
+        mc:Ignorable="d"
+        Deactivated="Window_Deactivated" Closed="Window_Closed"
         Height="{Binding UserSettings.WindowHeight, Mode=TwoWay}" Width="{Binding UserSettings.WindowWidth, Mode=TwoWay}"
         Top="{Binding UserSettings.WindowTop, Mode=TwoWay}" Left="{Binding UserSettings.WindowLeft, Mode=TwoWay}"
         Title="{Binding VersionString, StringFormat=Heroesprofile.com Uploader {0}}"
@@ -31,7 +31,13 @@
             <RowDefinition Height="auto" />
         </Grid.RowDefinitions>
         <Grid Grid.ColumnSpan="2" VerticalAlignment="Center" HorizontalAlignment="Center">
-            <Image Source="Resources/uploader_light.png" SnapsToDevicePixels="True" RenderOptions.BitmapScalingMode="HighQuality" Cursor="Hand" MouseUp="Logo_MouseUp" Margin="0,0,131,0" HorizontalAlignment="Center" VerticalAlignment="Bottom" />
+            <TextBlock>
+                <Hyperlink NavigateUri="https://heroesprofile.com" RequestNavigate="Hyperlink_RequestNavigate">
+                     <Image 
+                        Source="Resources/uploader_dark.png"  SnapsToDevicePixels="True" RenderOptions.BitmapScalingMode="HighQuality" 
+                        Cursor="Hand" Margin="0,0,131,0" HorizontalAlignment="Center" VerticalAlignment="Bottom" />
+                </Hyperlink>
+            </TextBlock>         
         </Grid>
         <ListBox Grid.Row="1" ItemsSource="{Binding Files}" HorizontalContentAlignment="Stretch">
             <ListBox.ItemTemplate>

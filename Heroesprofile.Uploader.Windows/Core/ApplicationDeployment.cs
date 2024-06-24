@@ -68,6 +68,10 @@ namespace Heroesprofile.Uploader.Windows.Core
             get { return Environment.GetEnvironmentVariable("ClickOnce_DataDirectory"); }
         }
 
+        /// <summary>
+        /// The value of this property is reset whenever the user upgrades from one version to the next. 
+        /// If you want to perform an operation only the very first time any version of the application is run, you will need to perform an additional test, such as checking for the existence of a file you created the first time, or storing a flag using Application Settings.
+        /// </summary>
         public bool IsFirstRun
         {
             get {

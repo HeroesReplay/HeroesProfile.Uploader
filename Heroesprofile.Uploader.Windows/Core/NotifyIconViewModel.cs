@@ -21,9 +21,11 @@ namespace Heroesprofile.Uploader.Windows.Core
         [RelayCommand(CanExecute = nameof(CanExecuteShowWindow))]
         public void ShowWindow()
         {
-            Application.Current.MainWindow ??= new MainWindow();
-            Application.Current.MainWindow.WindowState = WindowState.Normal;
             Application.Current.MainWindow.Show();
+            Application.Current.MainWindow.Activate();
+            Application.Current.MainWindow.WindowState = WindowState.Normal;
+
+
         }
 
         /// <summary>
@@ -32,7 +34,7 @@ namespace Heroesprofile.Uploader.Windows.Core
         [RelayCommand(CanExecute = nameof(CanExecuteHideWindow))]
         public void HideWindow()
         {
-            Application.Current.MainWindow.Hide(enableEfficiencyMode: true);
+            Application.Current.MainWindow.Hide(enableEfficiencyMode: false);
         }
 
         /// <summary>

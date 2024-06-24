@@ -126,15 +126,24 @@ namespace Heroesprofile.Uploader.Windows
                 settingsManager.SaveSettings(UserSettings);
             };
 
-            if (StartWithWindows) {
-                // TODO: running in the background
-            } else {
-                MainWindow = new MainWindow();
-                MainWindow.Deactivated += (o, ev) => {
-                    // TODO: TrayIcon.Visible = true;
-                };
+            var showWindow = false;
+
+            MainWindow = new MainWindow();
+            MainWindow.Deactivated += (o, ev) => { };
+
+#if DEBUG
+            showWindow = true;
+#else
+            showWindow = ApplicationDeployment.CurrentDeployment?.IsFirstRun == true || 
+                         ApplicationDeployment.IsNetworkDeployed == false || 
+                         UserSettings.MinimizeToTray == false;
+#endif
+
+
+            if (showWindow) {                
                 MainWindow.Show();
             }
+
             Manager.Start(new Monitor(), new LiveMonitor(), new Analyzer(), new Common.Uploader(), new LiveProcessor(Manager.PreMatchPage));
         }
 
@@ -157,14 +166,13 @@ namespace Heroesprofile.Uploader.Windows
         }
 
         public void Activate()
-        {   
-            MainWindow = new MainWindow();
-            MainWindow.Activate();
-            MainWindow.WindowState = WindowState.Normal;
-            MainWindow.Show();
-
-            // 
-            // TaskbarIcon.Visible = false;
+        {
+            if (MainWindow == null){
+                MainWindow = new MainWindow();
+                MainWindow.Activate();
+                MainWindow.WindowState = WindowState.Normal;
+                MainWindow.Show();
+            }
         }
 
         private void SetupTrayIcon()
