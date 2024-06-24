@@ -58,7 +58,7 @@ jobs:
       - name: Release to GitHub
         uses: ncipollo/release-action@v1
         with:
-          artifacts: "./Heroesprofile.Uploader.Windows/bin/publish/**"
+          artifacts: "publish/*"
           token: ${{ secrets.GITHUB_TOKEN }}
           tag: ${{ github.ref }}
           replacesArtifacts: true
