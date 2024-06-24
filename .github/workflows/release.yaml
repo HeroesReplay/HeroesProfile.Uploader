@@ -61,6 +61,8 @@ jobs:
           artifacts: "./Heroesprofile.Uploader.Windows/bin/publish/**"
           token: ${{ secrets.GITHUB_TOKEN }}
           tag: ${{ github.ref }}
+          replacesArtifacts: true
+          allowUpdates: true
           makeLatest: true
           generateReleaseNotes: true
           artifactErrorsFailBuild: true
