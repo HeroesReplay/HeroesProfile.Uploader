@@ -1,0 +1,146 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:HeroesProfile.Uploader.ViewModels"
+        xmlns:design="using:HeroesProfile.Uploader.Design"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:converters="clr-namespace:HeroesProfile.Uploader.Converters;assembly=HeroesProfile.Uploader"
+        xmlns:models="clr-namespace:HeroesProfile.Uploader.Models"
+        mc:Ignorable="d"
+        d:DesignWidth="800" d:DesignHeight="450"
+        x:Class="HeroesProfile.Uploader.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Icon="/Assets/avalonia-logo.ico"
+        Title="Heroes Profile Uploader">
+
+    <Design.DataContext>
+        <design:DesignMainWindowViewModel />
+    </Design.DataContext>
+    
+    <Window.Styles>
+        <Style Selector="TextBlock.Success">
+            <Setter 
+                Property="Foreground" 
+                Value="{DynamicResource SystemAccentColor}" />
+        </Style>
+        <Style Selector="TextBlock.UploadError">
+            <Setter 
+                Property="Foreground" 
+                Value="{DynamicResource SystemErrorTextColor}" />
+        </Style>
+    </Window.Styles>
+
+    <Window.Resources>
+        <ResourceDictionary>
+            <converters:UploadStatusEnumToStringConverter x:Key="UploadStatusEnumToStringConverter" />
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <Grid Margin="10">
+
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+
+        <Grid.RowDefinitions>
+            <RowDefinition Height="100" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Image Grid.Column="0" Grid.Row="0"
+               Margin="0, 2,0,2"
+               Width="500"
+               Stretch="UniformToFill"
+               Source="../Assets/uploader-l.png"
+               HorizontalAlignment="Center"
+               VerticalAlignment="Center" />
+
+        <ListBox Grid.Column="0" Grid.Row="1" Margin="5"
+                 ItemsSource="{Binding Files}"
+                 HorizontalAlignment="Stretch"
+                 ScrollViewer.VerticalScrollBarVisibility="Visible"
+                 BorderThickness="0.5"
+                 ScrollViewer.AllowAutoHide="False">
+           
+            <ListBox.ItemTemplate>
+                <DataTemplate DataType="models:StormReplayInfo">
+                    <DockPanel LastChildFill="False">
+
+                        <TextBlock DockPanel.Dock="Left"
+                                   Text="{Binding FileName}" />
+
+                        <TextBlock
+                            Padding="0, 0, 20, 0"
+                            
+                            DockPanel.Dock="Right"
+                            Classes.Success="{Binding IsSuccess}"
+                            Classes.UploadError="{Binding IsUploadError}"
+                            
+                            Text="{Binding UploadStatus,
+                            Converter={StaticResource UploadStatusEnumToStringConverter} }" />
+                    </DockPanel>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
+        <DockPanel Grid.Column="1" Grid.Row="1"
+                   Margin="5"
+                   LastChildFill="False">
+
+            <StackPanel DockPanel.Dock="Bottom">
+                
+                <ItemsControl IsVisible="True"
+                              ItemsSource="{Binding ProcessResults}"
+                              Padding="8"
+                              BorderThickness="0.5"
+                              DockPanel.Dock="Bottom"
+                              ScrollViewer.VerticalScrollBarVisibility="Auto"
+                              ScrollViewer.AllowAutoHide="False">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <DockPanel>
+                                <TextBlock DockPanel.Dock="Left"
+                                           Width="110"
+                                           TextAlignment="Left"
+                                           Text="{Binding UploadStatus, 
+                                    Converter={StaticResource UploadStatusEnumToStringConverter} }" />
+                                
+                                <TextBlock DockPanel.Dock="Right"
+                                           TextAlignment="Right"
+                                           Margin="2, 2 0, 0"
+                                           Text="{Binding Count, StringFormat=00}" />
+                            </DockPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+
+            <StackPanel DockPanel.Dock="Bottom">
+                <CheckBox 
+                    IsChecked="False" 
+                    Content="Launch on start" 
+                    ToolTip.Tip="Auto launch on system start up" />
+                
+                <CheckBox 
+                    IsChecked="False" 
+                    Content="Run in background" 
+                    ToolTip.Tip="Minimizing the app will hide the window" />
+                
+                <CheckBox
+                    IsChecked="False"
+                    Content="Open Pre-Match"
+                    IsEnabled="True"
+                    ToolTip.Tip="Open the pre-match page on Heroes Profile" />
+                
+                <CheckBox
+                    IsChecked="False"
+                    Content="Open Post-Match"
+                    ToolTip.Tip="Open the post-match page on Heroes Profile"
+                    IsEnabled="True" />
+            </StackPanel>
+
+        </DockPanel>
+
+    </Grid>
+</Window>

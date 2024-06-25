@@ -2,14 +2,14 @@
 
 using System.Collections.Generic;
 using System.Windows;
+using HeroesProfile.Uploader.Common;
 
-namespace Heroesprofile.Uploader.Windows.UIHelpers
+namespace Heroesprofile.Uploader.Windows.UIHelpers;
+
+public class IntToVisibilityConverter : GenericValueConverter<Dictionary<UploadStatus, int>, Visibility, UploadStatus>
 {
-    public class IntToVisibilityConverter : GenericValueConverter<Dictionary<UploadStatus, int>, Visibility, UploadStatus>
+    protected override Visibility Convert(Dictionary<UploadStatus, int> value, UploadStatus parameter)
     {
-        protected override Visibility Convert(Dictionary<UploadStatus, int> value, UploadStatus parameter)
-        {
-            return value.ContainsKey(parameter) ? Visibility.Visible : Visibility.Collapsed;
-        }
+        return value.ContainsKey(parameter) ? Visibility.Visible : Visibility.Collapsed;
     }
 }
