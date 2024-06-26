@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading.Tasks;
 using Heroes.StormReplayParser;
 using Heroes.StormReplayParser.Replay;
 using HeroesProfile.Uploader.Core.Enums;
@@ -41,7 +42,7 @@ public class Analyzer(ILogger<Analyzer> logger) : IAnalyzer
                 }
             }
 
-            file.Fingerprint = GetFingerprint(result.Replay);
+            file.Fingerprint = result.Replay.GetFingerprint();
 
             return result.Replay;
         }
@@ -84,15 +85,5 @@ public class Analyzer(ILogger<Analyzer> logger) : IAnalyzer
         return null;
     }
 
-    private static string GetFingerprint(StormReplay replay)
-    {
-        var stringBuilder = new StringBuilder();
-        
-        replay.StormPlayers.Select(p => p.BattleTagName).OrderBy(x => x).Do(x => stringBuilder.Append((string?)x));
-        stringBuilder.Append(replay.RandomValue);
-        
-        var md5 = MD5.HashData(Encoding.UTF8.GetBytes(stringBuilder.ToString()));
-        var result = new Guid(md5);
-        return result.ToString();
-    }
+    
 }

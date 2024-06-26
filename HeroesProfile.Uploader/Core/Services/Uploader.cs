@@ -3,13 +3,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Heroes.StormReplayParser;
 using HeroesProfile.Uploader.Core.Enums;
-using HeroesProfile.Uploader.Extensions;
 using HeroesProfile.Uploader.Models;
 using Microsoft.Extensions.Logging;
 
@@ -18,12 +15,15 @@ namespace HeroesProfile.Uploader.Core.Services;
 public interface IReplayUploader
 {
     bool PostMatchPage { get; set; }
-    Task CheckDuplicate(IEnumerable<StormReplayInfo> replayInfos);
-    Task<UploadStatus> Upload(StormReplay stormReplay, StormReplayInfo stormReplayInfo, string? appVersion = null);
+
+    Task<StormReplayInfo[]> GetAlreadyUploaded(StormReplayInfo[] replays);
+    Task<UploadStatus> UploadAsync(StormReplayInfo stormReplayInfo);
 }
 
 public class ReplayUploader(ILogger<ReplayUploader> logger) : IReplayUploader
 {
+    public bool PostMatchPage { get; set; }
+
 #if DEBUG
     const string HeroesProfileApiEndpoint = "http://127.0.0.1:8000/api";
     const string HeroesProfileMatchParsed = "http://127.0.0.1:8000/openApi/Replay/Parsed/?replayID=";
@@ -34,130 +34,44 @@ public class ReplayUploader(ILogger<ReplayUploader> logger) : IReplayUploader
     const string HeroesProfileMatchSummary = "https://www.heroesprofile.com/Match/Single/?replayID=";
 #endif
 
-    public async Task<UploadStatus> Upload(StormReplay stormReplay, StormReplayInfo stormReplayInfo)
+    public async Task<UploadStatus> UploadAsync(StormReplayInfo stormReplayInfo)
     {
+        if (stormReplayInfo.Fingerprint is null)
+            throw new ArgumentException("Fingerprint is null", nameof(stormReplayInfo.Fingerprint));
+
         stormReplayInfo.UploadStatus = UploadStatus.InProgress;
 
-        if (await CheckDuplicate(stormReplayInfo.Fingerprint)) {
+        var items = await GetAlreadyUploaded([stormReplayInfo]);
+
+        if (items.Length > 0) {
             logger.LogInformation("File {StormReplayInfo} marked as duplicate", stormReplayInfo);
             stormReplayInfo.UploadStatus = UploadStatus.Duplicate;
         }
 
         if (stormReplayInfo.UploadStatus == UploadStatus.InProgress) {
-            stormReplayInfo.UploadStatus = await PostAsync(stormReplay, stormReplayInfo);
+            stormReplayInfo.UploadStatus = await PostAsync(stormReplayInfo);
         }
 
         return stormReplayInfo.UploadStatus;
     }
 
-    private async Task<UploadStatus> PostAsync(StormReplay stormReplay, StormReplayInfo stormReplayInfo)
+    public async Task<StormReplayInfo[]> GetAlreadyUploaded(StormReplayInfo[] replays)
     {
-        var filePath = stormReplayInfo.FilePath;
-        var version = "Avalonia"; // TODO: FIx
-
-        using (var client = new HttpClient()) {
-            using (var content = new MultipartFormDataContent()) {
-                content.Add(new StreamContent(File.OpenRead(stormReplayInfo.FilePath)), "file", stormReplayInfo.FileName);
-                var response = await client.PostAsync($"{HeroesProfileApiEndpoint}/upload/heroesprofile/desktop/?fingerprint={stormReplayInfo.Fingerprint}&version={version}", content);
-
-                if (response.StatusCode != HttpStatusCode.OK) {
-                    return UploadStatus.UploadError;
-                }
-
-                var responseContent = await response.Content.ReadAsStringAsync();
-                UploadResult? result = UploadResult.FromJson(responseContent);
-
-                int replayId = result.ReplayId;
-
-                try {
-                    if (PostMatchPage && File.GetLastWriteTime(stormReplayInfo.FilePath) >= DateTime.Now.Subtract(TimeSpan.FromMinutes(60)) && replayId != 0) {
-                        await PostMatchAnalysis(replayId);
-                    }
-                }
-                catch (Exception e) {
-                    logger.LogError(e, "Failed to open match page");
-                }
-
-                if (!string.IsNullOrEmpty(result.Status)) {
-                    if (Enum.TryParse(result.Status, out UploadStatus status)) {
-                        logger.LogDebug("Uploaded file {FileName}: {Status}", filePath, status);
-                        return status;
-                    }
-
-                    logger.LogDebug("Unknown upload status {FileName}: {Status}", filePath, result.Status);
-                    return UploadStatus.UploadError;
-                }
-
-                logger.LogWarning("Error uploading file {FileName}: {Response}", filePath, responseContent);
-                return UploadStatus.UploadError;
-            }
-        }
-    }
-
-    private async Task PostMatchAnalysis(int replayId)
-    {
-        var timer = Stopwatch.StartNew();
-
-        using (var client = new HttpClient()) {
-            while (timer.Elapsed < TimeSpan.FromSeconds(15)) {
-                var response = await client.GetAsync($"{HeroesProfileMatchParsed}{replayId}");
-
-                if (response.IsSuccessStatusCode) {
-                    var body = await response.Content.ReadAsStringAsync();
-                    if ("true".Equals(body, StringComparison.OrdinalIgnoreCase)) {
-                        Process.Start($"{HeroesProfileMatchSummary}{replayId}");
-                        return;
-                    }
-                } else {
-                    await Task.Delay(TimeSpan.FromSeconds(2));
-                }
-            }
-
-            logger.LogWarning("Failed to open match page for replay {ReplayId}", replayId);
+        HashSet<string> fingerprints = new();
+        foreach (var item in replays) {
+            ArgumentException.ThrowIfNullOrWhiteSpace(nameof(item.Fingerprint), nameof(replays));
+            fingerprints.Add(item.Fingerprint!);
         }
 
-        timer.Stop();
-    }
-
-    private async Task<bool> CheckDuplicate(string fingerprint)
-    {
         try {
             using (var client = new HttpClient()) {
-                var response = await client.GetAsync($"{HeroesProfileApiEndpoint}/replays/fingerprints/{fingerprint}");
+                var payload = new StringContent(String.Join('\n', fingerprints));
+                var response = await client.PostAsync($"{HeroesProfileApiEndpoint}/replays/fingerprints", payload);
 
-                if (response.IsSuccessStatusCode) {
-                    return (await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync())).RootElement.GetProperty("exists").GetBoolean();
-                }
-
-                if (await CheckApiThrottling(response)) {
-                    return await CheckDuplicate(fingerprint);
-                }
-            }
-        }
-        catch (Exception e) {
-            logger.LogError(e, "Failed to check duplicate");
-        }
-
-        return false;
-    }
-
-    /// <summary>
-    /// Mass check replay fingerprints against database to detect duplicates
-    /// </summary>
-    /// <param name="fingerprints"></param>
-    private async Task<string[]> CheckDuplicate(IEnumerable<string> fingerprints)
-    {
-        try {
-            using (var client = new HttpClient()) {
-                HttpResponseMessage response = await client.PostAsync($"{HeroesProfileApiEndpoint}/replays/fingerprints",
-                    new StringContent(String.Join("\n", fingerprints)));
                 if (response.IsSuccessStatusCode) {
                     var json = await response.Content.ReadAsStringAsync();
-                    return JsonDocument.Parse(json).RootElement.GetProperty("exists").EnumerateArray().Select(x => x.GetString()).ToArray();
-                }
-
-                if (await CheckApiThrottling(response)) {
-                    return await CheckDuplicate(fingerprints);
+                    string[] results = JsonDocument.Parse(json).RootElement.GetProperty("exists").EnumerateArray().Select(x => x.GetString()!).ToArray();
+                    return replays.Where(r => results.Contains(r.Fingerprint)).ToArray();
                 }
             }
         }
@@ -165,37 +79,91 @@ public class ReplayUploader(ILogger<ReplayUploader> logger) : IReplayUploader
             logger.LogError(ex, $"Error checking fingerprint array");
         }
 
-        return Array.Empty<string>();
+        return [];
     }
 
-    public bool PostMatchPage { get; set; }
-
-    /// <summary>
-    /// Mass check replay fingerprints against database to detect duplicates
-    /// </summary>
-    public async Task CheckDuplicate(IEnumerable<StormReplayInfo> replays)
+    private async Task<UploadStatus> PostAsync(StormReplayInfo stormReplayInfo)
     {
-        var exists = new HashSet<string>(await CheckDuplicate(replays.Select(x => x.Fingerprint)));
-        replays.Where(x => exists.Contains(x.Fingerprint)).Do(x => x.UploadStatus = UploadStatus.Duplicate);
-    }
+        var filePath = stormReplayInfo.FilePath;
+        var version = "Avalonia";
+        var result = UploadStatus.None;
 
-    public Task<UploadStatus> Upload(StormReplay stormReplay, StormReplayInfo stormReplayInfo, string? appVersion = null)
-    {
-        throw new NotImplementedException();
-    }
+        using (var client = new HttpClient()) {
+            using (var content = new MultipartFormDataContent()) {
+                content.Add(new StreamContent(File.OpenRead(stormReplayInfo.FilePath)), "file", stormReplayInfo.FileName);
 
-    /// <summary>
-    /// Check if Heroes Profile API request limit is reached and wait if it is
-    /// </summary>
-    /// <param name="response">Server response to examine</param>
-    private async Task<bool> CheckApiThrottling(HttpResponseMessage response)
-    {
-        var tooManyRequests = response.StatusCode == HttpStatusCode.TooManyRequests;
+                var requestUri = $"{HeroesProfileApiEndpoint}/upload/heroesprofile/desktop/?fingerprint={stormReplayInfo.Fingerprint}&version={version}";
+                var response = await client.PostAsync(requestUri, content);
 
-        if (tooManyRequests) {
-            await Task.Delay(TimeSpan.FromSeconds(10));
+                if (response.IsSuccessStatusCode) {
+                    var json = await response.Content.ReadAsStringAsync();
+                    var uploadResult = UploadResult.FromJson(json);
+
+                    if (uploadResult is null)
+                        throw new Exception("Failed to parse UploadResult response");
+
+                    if (!string.IsNullOrEmpty(uploadResult.Status)) {
+                        if (Enum.TryParse(uploadResult.Status, out UploadStatus status)) {
+                            logger.LogDebug("Uploaded file {FileName}: {Status}", filePath, status);
+                            result = status;
+                        } else {
+                            logger.LogDebug("Unknown upload status {FileName}: {Status}", filePath, uploadResult.Status);
+                            result = UploadStatus.UploadError;
+                        }
+                    }
+
+                    await CheckPostMatch(stormReplayInfo, uploadResult);
+                } else {
+                    logger.LogWarning("Error uploading file {FileName}: {Response}", filePath, response.StatusCode);
+                    return UploadStatus.UploadError;
+                }
+            }
         }
+        
+        return result;
+    }
 
-        return tooManyRequests;
+    private async Task CheckPostMatch(StormReplayInfo stormReplayInfo, UploadResult result)
+    {
+        try {
+            if (PostMatchPage) {
+                bool isValidPostMatchCondition =
+                    result.ReplayId != 0 &&
+                    File.GetLastWriteTime(stormReplayInfo.FilePath) >= DateTime.Now.Subtract(TimeSpan.FromMinutes(60));
+
+                if (isValidPostMatchCondition) {
+                    await PostMatchAnalysis(result.ReplayId);
+                } else {
+                    logger.LogWarning("Failed to open match page for replay {ReplayId} due to invalid condition", result.ReplayId);
+                }
+            }
+        }
+        catch (Exception e) {
+            logger.LogError(e, "Failed to open match page");
+        }
+    }
+
+    private async Task PostMatchAnalysis(int replayId)
+    {
+        using (var client = new HttpClient()) {
+            var response = await client.GetAsync($"{HeroesProfileMatchParsed}{replayId}");
+
+            var postMatchLink = $"{HeroesProfileMatchSummary}{replayId}";
+
+            if (response.IsSuccessStatusCode) {
+                var body = await response.Content.ReadAsStringAsync();
+
+                if ("true".Equals(body, StringComparison.OrdinalIgnoreCase)) {
+                   
+                    if (OperatingSystem.IsMacOS()) {
+                        Process.Start("open", postMatchLink);
+                    } else if (OperatingSystem.IsWindows()) {
+                        Process.Start(new ProcessStartInfo(postMatchLink) { UseShellExecute = true });
+                    }
+                }
+            }
+            
+            logger.LogWarning("Failed to open match page for replay {ReplayId}", replayId);
+        }
     }
 }

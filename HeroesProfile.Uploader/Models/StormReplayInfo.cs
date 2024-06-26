@@ -2,7 +2,7 @@
 using System.ComponentModel;
 using System.IO;
 using System.Text.Json.Serialization;
-using System.Xml.Serialization;
+using Heroes.StormReplayParser;
 using HeroesProfile.Uploader.Core.Enums;
 
 namespace HeroesProfile.Uploader.Models;
@@ -13,17 +13,17 @@ public class StormReplayInfo : INotifyPropertyChanged, IComparable<StormReplayIn
     public event PropertyChangedEventHandler? PropertyChanged;
 
     [JsonIgnore]
-    [XmlIgnore]
-    public string Fingerprint { get; set; }
+    public string? Fingerprint { get; set; }
     
-    [XmlIgnore]
     [JsonIgnore]
     public string FileName => Path.GetFileNameWithoutExtension(FilePath);
 
-    public string FilePath { get; }
-    public DateTime Created { get; set; }
+    [JsonPropertyName("filePath")] public string FilePath { get; set; } = null!;
+
+    [JsonPropertyName("created")] public DateTime Created { get; set; }
     
-    
+    [JsonIgnore]
+    public StormReplay? StormReplay { get; set; }
 
     private bool _deleted;
     public bool Deleted
@@ -81,13 +81,13 @@ public class StormReplayInfo : INotifyPropertyChanged, IComparable<StormReplayIn
     
     [JsonIgnore]
     public bool IsTooOld => UploadStatus == UploadStatus.TooOld;
-    
 
     public StormReplayInfo()
     {
-
+        
     }
-
+    
+    [JsonConstructor]
     public StormReplayInfo(string filePath)
     {
         FilePath = filePath;
@@ -96,7 +96,14 @@ public class StormReplayInfo : INotifyPropertyChanged, IComparable<StormReplayIn
 
     public override string ToString() => FilePath;
 
-    public int CompareTo(StormReplayInfo? other) => GetHashCode().CompareTo(other?.GetHashCode());
+    public int CompareTo(StormReplayInfo? other)
+    {
+        if (other == null) {
+            return 1;
+        }
+
+        return Created.CompareTo(other.Created);
+    }
 
     public override int GetHashCode() => FilePath.GetHashCode() ^ Created.GetHashCode();
 }

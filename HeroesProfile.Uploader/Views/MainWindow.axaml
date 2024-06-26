@@ -1,31 +1,26 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:HeroesProfile.Uploader.ViewModels"
-        xmlns:design="using:HeroesProfile.Uploader.Design"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:converters="clr-namespace:HeroesProfile.Uploader.Converters;assembly=HeroesProfile.Uploader"
         xmlns:models="clr-namespace:HeroesProfile.Uploader.Models"
         mc:Ignorable="d"
+        Width="800" Height="450"
         d:DesignWidth="800" d:DesignHeight="450"
         x:Class="HeroesProfile.Uploader.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
-        Icon="/Assets/avalonia-logo.ico"
+        Icon="/Assets/icon-d.ico"
         Title="Heroes Profile Uploader">
-
-    <Design.DataContext>
-        <design:DesignMainWindowViewModel />
-    </Design.DataContext>
-    
     <Window.Styles>
         <Style Selector="TextBlock.Success">
-            <Setter 
-                Property="Foreground" 
+            <Setter
+                Property="Foreground"
                 Value="{DynamicResource SystemAccentColor}" />
         </Style>
         <Style Selector="TextBlock.UploadError">
-            <Setter 
-                Property="Foreground" 
+            <Setter
+                Property="Foreground"
                 Value="{DynamicResource SystemErrorTextColor}" />
         </Style>
     </Window.Styles>
@@ -53,8 +48,24 @@
                Width="500"
                Stretch="UniformToFill"
                Source="../Assets/uploader-l.png"
-               HorizontalAlignment="Center"
-               VerticalAlignment="Center" />
+               HorizontalAlignment="Center" />
+
+        <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Vertical">
+            <Button HorizontalContentAlignment="Stretch" Width="150">
+                <DockPanel HorizontalAlignment="Stretch">
+                    <TextBlock>Open Replays</TextBlock>
+                    <PathIcon Data="{DynamicResource folder_open_regular}"
+                              HorizontalAlignment="Right" />
+                </DockPanel>
+            </Button>
+            <Button HorizontalContentAlignment="Stretch" Width="150">
+                <DockPanel HorizontalAlignment="Stretch">
+                    <TextBlock>Open Logs</TextBlock>
+                    <PathIcon Data="{DynamicResource folder_open_regular}"
+                              HorizontalAlignment="Right" />
+                </DockPanel>
+            </Button>
+        </StackPanel>
 
         <ListBox Grid.Column="0" Grid.Row="1" Margin="5"
                  ItemsSource="{Binding Files}"
@@ -62,21 +73,16 @@
                  ScrollViewer.VerticalScrollBarVisibility="Visible"
                  BorderThickness="0.5"
                  ScrollViewer.AllowAutoHide="False">
-           
+
             <ListBox.ItemTemplate>
                 <DataTemplate DataType="models:StormReplayInfo">
                     <DockPanel LastChildFill="False">
-
-                        <TextBlock DockPanel.Dock="Left"
-                                   Text="{Binding FileName}" />
-
-                        <TextBlock
-                            Padding="0, 0, 20, 0"
-                            
+                        <TextBlock Text="{Binding FileName}" />
+                        <TextBlock Padding="0, 0, 20, 0"
                             DockPanel.Dock="Right"
                             Classes.Success="{Binding IsSuccess}"
                             Classes.UploadError="{Binding IsUploadError}"
-                            
+
                             Text="{Binding UploadStatus,
                             Converter={StaticResource UploadStatusEnumToStringConverter} }" />
                     </DockPanel>
@@ -84,63 +90,45 @@
             </ListBox.ItemTemplate>
         </ListBox>
 
-        <DockPanel Grid.Column="1" Grid.Row="1"
-                   Margin="5"
-                   LastChildFill="False">
-
-            <StackPanel DockPanel.Dock="Bottom">
-                
-                <ItemsControl IsVisible="True"
-                              ItemsSource="{Binding ProcessResults}"
-                              Padding="8"
-                              BorderThickness="0.5"
-                              DockPanel.Dock="Bottom"
-                              ScrollViewer.VerticalScrollBarVisibility="Auto"
-                              ScrollViewer.AllowAutoHide="False">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <DockPanel>
-                                <TextBlock DockPanel.Dock="Left"
-                                           Width="110"
-                                           TextAlignment="Left"
-                                           Text="{Binding UploadStatus, 
-                                    Converter={StaticResource UploadStatusEnumToStringConverter} }" />
-                                
-                                <TextBlock DockPanel.Dock="Right"
-                                           TextAlignment="Right"
-                                           Margin="2, 2 0, 0"
-                                           Text="{Binding Count, StringFormat=00}" />
-                            </DockPanel>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </StackPanel>
-
-            <StackPanel DockPanel.Dock="Bottom">
-                <CheckBox 
-                    IsChecked="False" 
-                    Content="Launch on start" 
-                    ToolTip.Tip="Auto launch on system start up" />
-                
-                <CheckBox 
-                    IsChecked="False" 
-                    Content="Run in background" 
-                    ToolTip.Tip="Minimizing the app will hide the window" />
-                
+        <StackPanel Grid.Column="1" Grid.Row="1" Margin="5" Orientation="Vertical">
+            <ItemsControl IsTabStop="False"
+                          ItemsSource="{Binding ProcessResults}"
+                          ScrollViewer.VerticalScrollBarVisibility="Auto"
+                          ScrollViewer.AllowAutoHide="True">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock TextAlignment="Right"
+                                       Margin="0, 2 4, 0"
+                                       Text="{Binding Count}"
+                                       Foreground="{Binding UploadStatus}"/>
+                            <TextBlock Width="100" Margin="0, 2, 0, 0"
+                                       TextAlignment="Left"
+                                       Text="{Binding UploadStatus, 
+                                            Converter={StaticResource UploadStatusEnumToStringConverter} }" />
+                        </StackPanel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            
+            <StackPanel Orientation="Vertical">
                 <CheckBox
+                    IsChecked="False"
+                    Content="Launch on start"
+                    ToolTip.Tip="Auto launch on system start up" />
+                <CheckBox IsChecked="False" Content="Run in background"
+                    ToolTip.Tip="Minimizing the app will hide the window" />
+                <CheckBox 
                     IsChecked="False"
                     Content="Open Pre-Match"
                     IsEnabled="True"
                     ToolTip.Tip="Open the pre-match page on Heroes Profile" />
-                
                 <CheckBox
                     IsChecked="False"
                     Content="Open Post-Match"
                     ToolTip.Tip="Open the post-match page on Heroes Profile"
                     IsEnabled="True" />
             </StackPanel>
-
-        </DockPanel>
-
+        </StackPanel>
     </Grid>
 </Window>
