@@ -22,6 +22,15 @@ public class ReplayStorer(ILogger<ReplayStorer> logger, IOptions<AppSettings> se
 
     private static readonly SemaphoreSlim SemaphoreSlim = new(1, 1);
 
+    private static JsonSerializerOptions _options = new() {
+        AllowTrailingCommas = true,
+        WriteIndented = true,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        PropertyNameCaseInsensitive = true,
+        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+        Converters = { new JsonStringEnumConverter<UploadStatus>() }
+    };
+
     public async Task<StoredReplayInfo[]> LoadAsync()
     {
         if (!File.Exists(_filePath)) {
@@ -32,7 +41,7 @@ public class ReplayStorer(ILogger<ReplayStorer> logger, IOptions<AppSettings> se
             await SemaphoreSlim.WaitAsync();
 
             await using (var stream = File.Open(_filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)) {
-                var items = JsonSerializer.Deserialize<StoredReplayInfo[]>(stream);
+                var items = JsonSerializer.Deserialize<StoredReplayInfo[]>(stream, _options);
                 return items ?? [];
             }
         }
@@ -52,12 +61,7 @@ public class ReplayStorer(ILogger<ReplayStorer> logger, IOptions<AppSettings> se
             await SemaphoreSlim.WaitAsync();
 
             await using (var stream = File.Open(_filePath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite)) {
-                await JsonSerializer.SerializeAsync(stream, files, new JsonSerializerOptions() {
-                    WriteIndented = true,
-                    Converters = {
-                        new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)
-                    }
-                });
+                await JsonSerializer.SerializeAsync(stream, files, _options);
             }
 
             logger.LogInformation("Replay upload data saved");

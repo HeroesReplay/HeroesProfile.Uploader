@@ -17,11 +17,14 @@ public class ReplayAnalyzer(ILogger<ReplayAnalyzer> logger) : IReplayAnalyzer
 {
     public int MinimumBuild { get; set; }
 
+    private static readonly ParseOptions Options = new() {
+        AllowPTR = false, ShouldParseMessageEvents = false, ShouldParseGameEvents = false, ShouldParseTrackerEvents = false
+    };
+
     public StormReplay? Analyze(StormReplayInfo file)
     {
         try {
-            StormReplayResult result = StormReplay.Parse(file.FilePath,
-                new ParseOptions() { AllowPTR = false, ShouldParseMessageEvents = false, ShouldParseGameEvents = false, ShouldParseTrackerEvents = false });
+            StormReplayResult result = StormReplay.Parse(file.FilePath, Options);
 
             if (result.Status != StormReplayParseStatus.Success) {
                 file.UploadStatus = UploadStatus.Incomplete;
@@ -29,12 +32,16 @@ public class ReplayAnalyzer(ILogger<ReplayAnalyzer> logger) : IReplayAnalyzer
             }
 
             if (result.Exception != null) {
-            } else {
-                var status = GetPreStatus(result.Replay, result.Status);
+                logger.LogError(result.Exception, "Failed to analyze replay file {Filename}", file.FilePath);
+                return null;
+            }
 
-                if (status.HasValue) {
-                    file.UploadStatus = status.Value;
-                }
+            var status = GetPreStatus(result.Replay, result.Status);
+
+            logger.LogInformation("Parsed replay {Filename} with PreStatus {Status}", file.FilePath, status);
+
+            if (status.HasValue) {
+                file.UploadStatus = status.Value;
             }
 
             file.Fingerprint = result.Replay.GetFingerprint();
@@ -63,7 +70,7 @@ public class ReplayAnalyzer(ILogger<ReplayAnalyzer> logger) : IReplayAnalyzer
         if (parseResult != StormReplayParseStatus.Success) {
             return null;
         }
-        
+
         if (replay.HasAI) {
             return UploadStatus.AiDetected;
         }
@@ -73,8 +80,7 @@ public class ReplayAnalyzer(ILogger<ReplayAnalyzer> logger) : IReplayAnalyzer
         }
 
         if (replay.GameMode == StormGameMode.Custom) {
-            // return UploadStatus.CustomGame;
-            return null;
+            return UploadStatus.CustomGame;
         }
 
         return null;

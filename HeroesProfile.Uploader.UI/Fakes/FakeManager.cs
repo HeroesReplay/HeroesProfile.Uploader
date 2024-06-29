@@ -15,7 +15,7 @@ public class FakeManager : IManager
 
     public FakeManager()
     {
-        Start();
+        StartAsync();
     }
 
     ~FakeManager()
@@ -26,7 +26,7 @@ public class FakeManager : IManager
     public bool PreMatchPage { get; set; }
     public bool PostMatchPage { get; set; }
 
-    public async Task Start(CancellationToken token = default)
+    public async Task StartAsync(CancellationToken token = default)
     {
         string[] map = [
             "Hanamura",

@@ -92,7 +92,7 @@ public class ReplayUploader : IReplayUploader
     {
         var filePath = stormReplayInfo.FilePath;
         var version = "Avalonia";
-        UploadStatus result = UploadStatus.Pending;
+        UploadStatus result;
 
         using (var content = new MultipartFormDataContent()) {
             content.Add(new StreamContent(File.OpenRead(stormReplayInfo.FilePath)), "file", stormReplayInfo.FileName);
@@ -148,13 +148,14 @@ public class ReplayUploader : IReplayUploader
     private async Task PostMatchAnalysis(int replayId)
     {
         var response = await _httpClient.GetAsync($"openApi/Replay/Parsed/?replayID={replayId}");
-
-        var postMatchLink = $"{HeroesProfileMatchSummary}{replayId}";
-
+        
         if (response.IsSuccessStatusCode) {
             var body = await response.Content.ReadAsStringAsync();
 
             if ("true".Equals(body, StringComparison.OrdinalIgnoreCase)) {
+                
+                var postMatchLink = $"{HeroesProfileMatchSummary}{replayId}";
+                
                 if (OperatingSystem.IsMacOS()) {
                     Process.Start("open", postMatchLink);
                 } else if (OperatingSystem.IsWindows()) {

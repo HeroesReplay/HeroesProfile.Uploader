@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -12,6 +13,24 @@ namespace HeroesProfile.Uploader.UI.Fakes;
 
 public class MockServerHttpMessageHandler : DelegatingHandler
 {
+    private readonly StatusProbability _statusProbability;
+
+    public MockServerHttpMessageHandler()
+    {
+        var statusProbabilities = new Dictionary<UploadStatus, double> {
+            { UploadStatus.Success, 0.65 },
+            { UploadStatus.UploadError, 0.10 },
+            { UploadStatus.Duplicate, 0.10 },
+            { UploadStatus.AiDetected, 0.05 },
+            { UploadStatus.CustomGame, 0.05 },
+            { UploadStatus.PtrRegion, 0.05 },
+            { UploadStatus.Incomplete, 0.05 },
+            { UploadStatus.TooOld, 0.05 },
+        };
+
+        _statusProbability = new StatusProbability(statusProbabilities);
+    }
+
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         return request.RequestUri switch {
@@ -48,7 +67,7 @@ public class MockServerHttpMessageHandler : DelegatingHandler
         await Task.Delay(TimeSpan.FromSeconds(1));
 
         // Randomly select an upload status
-        var option = Enum.GetValues<UploadStatus>().MinBy(x => Random.Shared.Next());
+        var option = _statusProbability.GetRandomStatus();
 
         var result = new UploadResult() { Status = option, ReplayId = Random.Shared.Next(1, 1000), Fingerprint = Guid.NewGuid(), };
 
@@ -66,5 +85,33 @@ public class MockServerHttpMessageHandler : DelegatingHandler
         };
 
         return Task.FromResult(response);
+    }
+
+    public class StatusProbability
+    {
+        private readonly Dictionary<UploadStatus, double> _statusProbabilities;
+        private readonly Random _random;
+
+        public StatusProbability(Dictionary<UploadStatus, double> statusProbabilities)
+        {
+            _statusProbabilities = statusProbabilities;
+            _random = new Random();
+        }
+
+        public UploadStatus GetRandomStatus()
+        {
+            var randomNumber = _random.NextDouble();
+
+            double cumulative = 0.0;
+            foreach (var entry in _statusProbabilities) {
+                cumulative += entry.Value;
+                if (randomNumber < cumulative) {
+                    return entry.Key;
+                }
+            }
+
+            // If no status is selected (which should not happen if the probabilities add up to 1), return a default status.
+            return UploadStatus.Pending;
+        }
     }
 }

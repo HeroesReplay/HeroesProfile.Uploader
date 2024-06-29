@@ -25,6 +25,9 @@ public class PreMatchProcessor(ILogger<PreMatchProcessor> logger, HttpClient htt
     {
         if (PreMatchPage) {
             var result = StormReplayPregame.Parse(battleLobbyPath, new ParsePregameOptions() { AllowPTR = false });
+
+            logger.LogInformation("Parsed prematch {BattleLobbyPath} with status {Status}", battleLobbyPath, result.Status);
+
             if (result.Status == StormReplayPregameParseStatus.Success) {
                 await PostPreMatch(result.ReplayBattleLobby);
             }
@@ -41,9 +44,8 @@ public class PreMatchProcessor(ILogger<PreMatchProcessor> logger, HttpClient htt
             var body = await response.Content.ReadAsStringAsync();
 
             if (int.TryParse(body, out var value)) {
-
                 var path = httpClient.BaseAddress + $"PreMatch/Results/?prematchID={value}";
-                
+
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
                     Process.Start(path);
                 } else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) {
@@ -51,7 +53,6 @@ public class PreMatchProcessor(ILogger<PreMatchProcessor> logger, HttpClient htt
                 } else {
                     throw new NotSupportedException("Unsupported operating system");
                 }
-                
             } else {
                 logger.LogError("Integer value not returned for postmatch replayID. Response: {Body}", body);
             }

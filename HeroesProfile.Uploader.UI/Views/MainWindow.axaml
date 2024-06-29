@@ -10,9 +10,10 @@
         x:Class="HeroesProfile.Uploader.UI.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Icon="/Assets/icon-d.ico"
+        ShowInTaskbar="True"
         Title="HeroesProfile Uploader">
 
-     <Window.Styles>
+    <Window.Styles>
         <Style Selector="TextBlock.Success">
             <Setter
                 Property="Foreground"
@@ -23,9 +24,9 @@
                 Property="Foreground"
                 Value="{DynamicResource SystemErrorTextColor}" />
         </Style>
-         <Style Selector="TextBlock.Warning">
-             <Setter Property="Foreground" Value="Orange" />
-         </Style>
+        <Style Selector="TextBlock.Warning">
+            <Setter Property="Foreground" Value="Orange" />
+        </Style>
     </Window.Styles>
 
     <Window.Resources>
@@ -55,7 +56,7 @@
 
         <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Vertical">
             <Button Margin="2"
-                    Command="{Binding OpenReplaysCommand}" 
+                    Command="{Binding OpenReplaysCommand}"
                     IsEnabled="True"
                     HorizontalContentAlignment="Stretch" Width="150">
                 <DockPanel HorizontalAlignment="Stretch">
@@ -74,7 +75,7 @@
                               HorizontalAlignment="Right" />
                 </DockPanel>
             </Button>
-            
+
         </StackPanel>
 
         <ListBox Grid.Column="0" Grid.Row="1" Margin="5"
@@ -89,20 +90,20 @@
                     <DockPanel LastChildFill="False">
                         <TextBlock Text="{Binding FileName}" />
                         <TextBlock Padding="0, 0, 5, 0"
-                            DockPanel.Dock="Right"
-                            Classes.Success="{Binding IsSuccess}"
-                            Classes.Warning="{Binding IsWarning}"
-                            Classes.Error="{Binding IsError}"
+                                   DockPanel.Dock="Right"
+                                   Classes.Success="{Binding IsSuccess}"
+                                   Classes.Warning="{Binding IsWarning}"
+                                   Classes.Error="{Binding IsError}"
 
-                            Text="{Binding UploadStatus,
+                                   Text="{Binding UploadStatus,
                             Converter={StaticResource UploadStatusEnumToStringConverter} }" />
                     </DockPanel>
                 </DataTemplate>
             </ListBox.ItemTemplate>
         </ListBox>
-        
+
         <DockPanel Grid.Column="1" Grid.Row="1" LastChildFill="False">
-            
+
             <ItemsControl DockPanel.Dock="Top" ItemsSource="{Binding Path=Results, Mode=OneTime}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="models:StormReplayProcessResult">
@@ -110,38 +111,36 @@
                             <TextBlock TextAlignment="Right"
                                        Margin="0, 2 4, 0"
                                        Text="{Binding Count}" />
-                            
+
                             <TextBlock Width="100" Margin="0, 2, 0, 0"
                                        TextAlignment="Left"
                                        Text="{Binding UploadStatus, Converter={StaticResource UploadStatusEnumToStringConverter} }" />
                         </StackPanel>
-                        
+
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
-            
+
             <StackPanel Margin="5" Orientation="Vertical" DockPanel.Dock="Bottom">
-                
-                <CheckBox IsChecked="False"
+
+                <CheckBox IsChecked="{Binding LaunchOnStart}"
                           Content="Launch on start"
                           ToolTip.Tip="Auto launch on system start up" />
-                
-                <CheckBox IsChecked="False" 
+
+                <CheckBox IsChecked="{Binding RunInBackground}"
                           Content="Run in background"
                           ToolTip.Tip="Minimizing the app will hide the window" />
-                
-                <CheckBox IsChecked="False"
+
+                <CheckBox IsChecked="{Binding PreMatchPage}"
                           Content="Open Pre-Match"
-                          IsEnabled="True"
                           ToolTip.Tip="Open the pre-match page on Heroes Profile" />
-                
-                <CheckBox IsChecked="False"
+
+                <CheckBox IsChecked="{Binding PostMatchPage}"
                           Content="Open Post-Match"
-                          ToolTip.Tip="Open the post-match page on Heroes Profile"
-                          IsEnabled="True" />
-                
+                          ToolTip.Tip="Open the post-match page on Heroes Profile" />
+
             </StackPanel>
-            
+
         </DockPanel>
     </Grid>
 

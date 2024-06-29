@@ -21,7 +21,7 @@ public interface IManager
     bool PreMatchPage { get; set; }
     bool PostMatchPage { get; set; }
 
-    Task Start(CancellationToken token);
+    Task StartAsync(CancellationToken token);
     void Stop();
 }
 
@@ -43,6 +43,7 @@ public class Manager(
     private bool _preMatchPage;
     private bool _postMatchPage;
 
+    private readonly StormReplayInfoComparer _comparer = new();
 
     public bool PreMatchPage
     {
@@ -50,7 +51,6 @@ public class Manager(
         set {
             _preMatchPage = value;
             preMatchProcessor.PreMatchPage = value;
-            this.RaiseAndSetIfChanged(ref _preMatchPage, value);
         }
     }
 
@@ -60,11 +60,10 @@ public class Manager(
         set {
             _postMatchPage = value;
             replayUploader.PostMatchPage = value;
-            this.RaiseAndSetIfChanged(ref _postMatchPage, value);
         }
     }
 
-    public async Task Start(CancellationToken token)
+    public async Task StartAsync(CancellationToken token)
     {
         if (_initialized) return;
         _initialized = true;
@@ -125,6 +124,8 @@ public class Manager(
     private async Task UploadLoop(CancellationToken token)
     {
         while (!token.IsCancellationRequested) {
+            logger.LogInformation("Manager loop...");
+
             while (_processingQueue.Any()) {
                 logger.LogInformation("Processing queue");
 
@@ -176,10 +177,10 @@ public class Manager(
         StoredReplayInfo[] storedReplays = await replayStorer.LoadAsync();
         List<StormReplayInfo> replays = new List<StormReplayInfo>(storedReplays.Select(sr => sr.ToStormReplayInfo()));
 
-        HashSet<StormReplayInfo> lookup = new HashSet<StormReplayInfo>(replays);
+        HashSet<StormReplayInfo> lookup = new HashSet<StormReplayInfo>(replays, _comparer);
 
         var filesToAdd = gameMonitor.GetStormReplays()
-            .Select(filePath => new StormReplayInfo() { FilePath = filePath, })
+            .Select(filePath => new StormReplayInfo() { Created = File.GetCreationTime(filePath), FilePath = filePath, })
             .Where(x => !lookup.Contains(x));
 
         replays.AddRange(filesToAdd);
@@ -187,7 +188,7 @@ public class Manager(
         return replays.OrderByDescending(x => x.Created).ToList();
     }
 
-    public async Task EnsureFileAvailable(string filename, bool testWrite = true)
+    private async Task EnsureFileAvailable(string filename, bool testWrite = true)
     {
         var timer = Stopwatch.StartNew();
 
