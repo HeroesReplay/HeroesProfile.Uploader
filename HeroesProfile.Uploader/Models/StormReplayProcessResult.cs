@@ -1,26 +1,34 @@
 ﻿using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
-using HeroesProfile.Uploader.Core.Enums;
 
 namespace HeroesProfile.Uploader.Models;
 
-public sealed class StormReplayProcessResult : INotifyPropertyChanged
-{
-    public int Count { get; set; }
-    public UploadStatus UploadStatus { get; set; }
-    public event PropertyChangedEventHandler? PropertyChanged;
+using ReactiveUI;
 
-    private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+public sealed class StormReplayProcessResult : ReactiveObject
+{
+    public bool IsError => UploadStatus == UploadStatus.UploadError;
+    public bool IsSuccess => UploadStatus == UploadStatus.Success;
+    public bool IsWarning => UploadStatus != UploadStatus.InProgress && UploadStatus != UploadStatus.Success && UploadStatus != UploadStatus.UploadError;
+
+    private int _count;
+    public int Count
     {
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        get => _count;
+        set => this.RaiseAndSetIfChanged(ref _count, value);
     }
 
-    private bool SetField<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
+    private UploadStatus _uploadStatus;
+    public UploadStatus UploadStatus
     {
-        if (EqualityComparer<T>.Default.Equals(field, value)) return false;
-        field = value;
-        OnPropertyChanged(propertyName);
-        return true;
+        get => _uploadStatus;
+        set => this.RaiseAndSetIfChanged(ref _uploadStatus, value);
+    }
+
+    public StormReplayProcessResult(UploadStatus uploadStatus, int count)
+    {
+        UploadStatus = uploadStatus;
+        Count = count;
     }
 }

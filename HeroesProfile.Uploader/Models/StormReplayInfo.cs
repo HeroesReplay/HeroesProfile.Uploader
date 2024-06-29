@@ -3,107 +3,78 @@ using System.ComponentModel;
 using System.IO;
 using System.Text.Json.Serialization;
 using Heroes.StormReplayParser;
-using HeroesProfile.Uploader.Core.Enums;
+using ReactiveUI;
 
 namespace HeroesProfile.Uploader.Models;
 
-[Serializable]
-public class StormReplayInfo : INotifyPropertyChanged, IComparable<StormReplayInfo>
+public class StoredReplayInfo
 {
-    public event PropertyChangedEventHandler? PropertyChanged;
-
-    [JsonIgnore]
-    public string? Fingerprint { get; set; }
-    
-    [JsonIgnore]
-    public string FileName => Path.GetFileNameWithoutExtension(FilePath);
-
-    [JsonPropertyName("filePath")] public string FilePath { get; set; } = null!;
+    [JsonPropertyName("filePath")] public string? FilePath { get; set; }
 
     [JsonPropertyName("created")] public DateTime Created { get; set; }
-    
+
+    [JsonPropertyName("uploadStatus")] public UploadStatus UploadStatus { get; set; }
+
+    public StormReplayInfo ToStormReplayInfo() => new StormReplayInfo { FilePath = FilePath!, Created = Created, UploadStatus = UploadStatus };
+}
+
+public class StormReplayInfo : ReactiveObject, IEquatable<StormReplayInfo>
+{
+    #region Calculated Properties
+
+    [JsonIgnore] public StormReplay? StormReplay { get; set; }
+
+    [JsonIgnore] public string? Fingerprint { get; set; }
+
+    [JsonIgnore] public string FileName => Path.GetFileNameWithoutExtension(FilePath);
+
+    [JsonIgnore] public bool IsSuccess => UploadStatus == UploadStatus.Success;
+
     [JsonIgnore]
-    public StormReplay? StormReplay { get; set; }
+    public bool IsWarning => UploadStatus != UploadStatus.InProgress && UploadStatus != UploadStatus.Success && UploadStatus != UploadStatus.UploadError;
 
-    private bool _deleted;
-    public bool Deleted
-    {
-        get => _deleted;
-        set {
-            if (_deleted == value) {
-                return;
-            }
+    [JsonIgnore] public bool IsError => UploadStatus == UploadStatus.UploadError;
 
-            _deleted = value;
+    #endregion
 
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Deleted)));
-        }
-    }
+    [JsonPropertyName("filePath")] public string FilePath { get; set; } = null!;
+    [JsonPropertyName("created")] public DateTime Created { get; set; }
 
-    UploadStatus _uploadStatus = UploadStatus.None;
+    [JsonPropertyName("deleted")] public bool Deleted { get; set; } = false;
 
+    UploadStatus _uploadStatus = UploadStatus.Pending;
+
+
+    [JsonPropertyName("uploadStatus")]
     public UploadStatus UploadStatus
     {
         get => _uploadStatus;
         set {
-            if (_uploadStatus == value) {
-                return;
-            }
-
-            _uploadStatus = value;
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(UploadStatus)));
+            this.RaiseAndSetIfChanged(ref _uploadStatus, value);
+            this.RaisePropertyChanged(nameof(IsSuccess));
+            this.RaisePropertyChanged(nameof(IsWarning));
+            this.RaisePropertyChanged(nameof(IsError));
         }
     }
-
-    [JsonIgnore]
-    public bool IsSuccess => UploadStatus == UploadStatus.Success;
-    
-    [JsonIgnore]
-    public bool IsInProgress => UploadStatus == UploadStatus.InProgress;
-    
-    [JsonIgnore]
-    public bool IsUploadError => UploadStatus == UploadStatus.UploadError;
-    
-    [JsonIgnore]
-    public bool IsDuplicate => UploadStatus == UploadStatus.Duplicate;
-    
-    [JsonIgnore]
-    public bool IsAiDetected => UploadStatus == UploadStatus.AiDetected;
-    
-    [JsonIgnore]
-    public bool IsCustomGame => UploadStatus == UploadStatus.CustomGame;
-    
-    [JsonIgnore]
-    public bool IsPtrRegion => UploadStatus == UploadStatus.PtrRegion;
-    
-    [JsonIgnore]
-    public bool IsIncomplete => UploadStatus == UploadStatus.Incomplete;
-    
-    [JsonIgnore]
-    public bool IsTooOld => UploadStatus == UploadStatus.TooOld;
 
     public StormReplayInfo()
     {
-        
     }
-    
-    [JsonConstructor]
-    public StormReplayInfo(string filePath)
-    {
-        FilePath = filePath;
-        Created = File.GetCreationTime(filePath);
-    }           
 
-    public override string ToString() => FilePath;
+    public StoredReplayInfo ToStorageReplay() => new() { FilePath = FilePath, Created = Created, UploadStatus = UploadStatus };
 
     public int CompareTo(StormReplayInfo? other)
     {
-        if (other == null) {
+        if (other == null)
             return 1;
-        }
 
-        return Created.CompareTo(other.Created);
+        return string.Compare(FilePath, other.FilePath, StringComparison.Ordinal);
     }
 
-    public override int GetHashCode() => FilePath.GetHashCode() ^ Created.GetHashCode();
+    public bool Equals(StormReplayInfo? other)
+    {
+        return other != null && FilePath.Equals(other.FilePath);
+    }
+
+    public override string ToString() => FilePath;
 }

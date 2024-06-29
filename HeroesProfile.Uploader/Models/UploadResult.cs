@@ -2,32 +2,22 @@
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using HeroesProfile.Uploader.Core.JsonConverters;
 
 namespace HeroesProfile.Uploader.Models;
 
 public class UploadResult
 {
     [JsonPropertyName("fingerprint")]
-    public Guid Fingerprint { get; set; }
+    public required Guid Fingerprint { get; init; }
 
     [JsonPropertyName("replayID")]
-    public int ReplayId { get; set; }
+    public required int ReplayId { get; init; }
 
-    [JsonPropertyName("status")]
-    public string Status { get; set; }
+    [JsonPropertyName("status")] 
+    public required UploadStatus Status { get; init; }
     
-    public static UploadResult? FromJson(string json) => JsonSerializer.Deserialize<UploadResult>(json, Converter.Settings);
-    
-    public string ToJson() => JsonSerializer.Serialize(this, Converter.Settings);
-}
-
-internal static class Converter
-{
-    public static readonly JsonSerializerOptions? Settings = new() {
-
-        Converters = { 
-            new IsoDateTimeConverter(DateTimeStyles.AssumeUniversal)
-        },
-    };
+    public UploadResult()
+    {
+        
+    }
 }
