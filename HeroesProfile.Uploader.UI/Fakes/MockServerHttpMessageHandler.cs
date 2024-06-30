@@ -34,10 +34,20 @@ public class MockServerHttpMessageHandler : DelegatingHandler
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         return request.RequestUri switch {
+            { AbsolutePath: "/PreMatch" } => HandlePreMatch(request),
             { AbsolutePath: "/replays/fingerprints" } => HandleFingerprints(request),
             { AbsolutePath: "/upload/heroesprofile/desktop" } => HandleUpload(request),
             { AbsolutePath: "/openApi/Replay/Parsed" } => HandleReplayParsed(request),
             _ => Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound))
+        };
+    }
+
+    private async Task<HttpResponseMessage> HandlePreMatch(HttpRequestMessage request)
+    {
+        await Task.Delay(TimeSpan.FromSeconds(0.25));
+
+        return new HttpResponseMessage(HttpStatusCode.OK) {
+            Content = new StringContent(Random.Shared.Next(1, 1000).ToString(), Encoding.UTF8, "application/text")
         };
     }
 
@@ -46,25 +56,25 @@ public class MockServerHttpMessageHandler : DelegatingHandler
         var isDuplicate = Random.Shared.Next(0, 2) == 0;
 
         // Fake API delay
-        await Task.Delay(TimeSpan.FromSeconds(1));
+        await Task.Delay(TimeSpan.FromSeconds(0.25));
 
         if (isDuplicate) {
             var payload = await request.Content!.ReadAsStringAsync();
             var fingerprints = payload.Split("\n");
             var fingerprintsJson = JsonSerializer.Serialize(fingerprints);
-            var responseContent = $"{{\"exists\": {fingerprintsJson}}}";
+            var responseContent = $$"""{ "exists": {{fingerprintsJson}}}""";
 
             var response = new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(responseContent, Encoding.UTF8, "application/json") };
             return response;
         }
 
-        return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("{ \"exists\": [] }", Encoding.UTF8, "application/json") };
+        return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("""{ "exists": [] }""", Encoding.UTF8, "application/json") };
     }
 
     private async Task<HttpResponseMessage> HandleUpload(HttpRequestMessage request)
     {
         // Fake API delay
-        await Task.Delay(TimeSpan.FromSeconds(1));
+        await Task.Delay(TimeSpan.FromSeconds(0.25));
 
         // Randomly select an upload status
         var option = _statusProbability.GetRandomStatus();

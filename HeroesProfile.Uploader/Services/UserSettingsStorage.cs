@@ -4,21 +4,20 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using HeroesProfile.Uploader.Models;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace HeroesProfile.Uploader.Services;
 
-public class UserSettingsStorage(ILogger<UserSettingsStorage> logger, IOptions<AppSettings> appSettings)
+public class UserSettingsStorage(ILogger<UserSettingsStorage> logger, AppSettings appSettings)
 {
     private UserSettings? _userSettings;
     public UserSettings? UserSettings => _userSettings;
 
-    private readonly string _filePath = Path.Combine(appSettings.Value.HeroesProfileAppData.FullName, "user-settings.json");
+    private readonly string _filePath = Path.Combine(appSettings.HeroesProfileAppData.FullName, "user-settings.json");
 
     public async Task LoadAsync()
     {
         if (!File.Exists(_filePath)) {
-            _userSettings = appSettings.Value.DefaultUserSettings;
+            _userSettings = appSettings.DefaultUserSettings;
             logger.LogInformation("User settings file not found, using default settings");
             return;
         }

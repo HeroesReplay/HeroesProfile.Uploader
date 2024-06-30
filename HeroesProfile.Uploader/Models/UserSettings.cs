@@ -7,49 +7,37 @@ namespace HeroesProfile.Uploader.Models;
 
 public sealed class UserSettings : INotifyPropertyChanged
 {
-    private bool _postMatchPage;
-    private bool _preMatchPage;
-    private bool _minimizeToTray;
-    private bool _launchOnStart;
-
-    // [JsonPropertyName("windowTop")]
-    // public int WindowTop { get; set; }
-    //
-    // [JsonPropertyName("windowLeft")]
-    // public int WindowLeft { get; set; }
-    //
-    // [JsonPropertyName("windowHeight")]
-    // public int WindowHeight { get; set; }
-    //
-    // [JsonPropertyName("windowWidth")]
-    // public int WindowWidth { get; set; }
+    private bool _isPostMatchEnabled;
+    private bool _isPreMatchEnabled;
+    private bool _isMinimizeToTrayEnabled;
+    private bool _isLaunchOnStartEnabled;
 
     [JsonPropertyName("minimizeToTray")]
-    public bool MinimizeToTray
+    public bool IsMinimizeToTrayEnabled
     {
-        get => _minimizeToTray;
-        set => SetField(ref _minimizeToTray, value);
+        get => _isMinimizeToTrayEnabled;
+        set => SetField(ref _isMinimizeToTrayEnabled, value);
     }
 
     [JsonPropertyName("preMatchPage")]
-    public bool PreMatchPage
+    public bool IsPreMatchEnabled
     {
-        get => _preMatchPage;
-        set => SetField(ref _preMatchPage, value);
+        get => _isPreMatchEnabled;
+        set => SetField(ref _isPreMatchEnabled, value);
     }
 
     [JsonPropertyName("postMatchPage")]
-    public bool PostMatchPage
+    public bool IsPostMatchEnabled
     {
-        get => _postMatchPage;
-        set => SetField(ref _postMatchPage, value);
+        get => _isPostMatchEnabled;
+        set => SetField(ref _isPostMatchEnabled, value);
     }
 
     [JsonPropertyName("launchOnStart")]
-    public bool LaunchOnStart
+    public bool IsLaunchOnStartEnabled
     {
-        get => _launchOnStart;
-        set => SetField(ref _launchOnStart, value);
+        get => _isLaunchOnStartEnabled;
+        set => SetField(ref _isLaunchOnStartEnabled, value);
     }
 
     public UserSettings()

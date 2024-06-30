@@ -52,6 +52,8 @@ public class App : Application
             logger.LogInformation("User settings loaded");
 
             var manager = Services.GetRequiredService<IManager>();
+            manager.IsPostMatchEnabled = userSettingsStorage.UserSettings!.IsPostMatchEnabled;
+            manager.IsPreMatchEnabled = userSettingsStorage.UserSettings.IsPreMatchEnabled;
             await manager.StartAsync(_cancellationTokenSource.Token);
 
             desktop.MainWindow = new MainWindow() { DataContext = Services.GetRequiredService<MainWindowViewModel>() };
@@ -65,13 +67,19 @@ public class App : Application
 
         IConfiguration configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
 
+        AppSettings appSettings = configuration.GetSection(nameof(AppSettings)).Get<AppSettings>()!;
+        appSettings.CreateAppDataIfNotExists();
+
         services
             .AddLogging()
             .AddSingleton(configuration)
+            .AddSingleton(appSettings)
             .AddSingleton<UserSettingsStorage>()
-            .AddSerilog(loggerConfiguration => loggerConfiguration.ReadFrom.Configuration(configuration))
-            .Configure<AppSettings>(configuration.GetSection(nameof(AppSettings)))
-            .AddOptions<AppSettings>(nameof(AppSettings));
+            .AddSerilog(loggerConfiguration => {
+                loggerConfiguration.ReadFrom.Configuration(configuration);
+                loggerConfiguration.WriteTo.File(
+                    path: appSettings.HeroesProfileAppData.FullName + "/log.txt");
+            });
 
         if (Design.IsDesignMode) {
             services.AddSingleton<IManager, FakeManager>();
@@ -79,30 +87,27 @@ public class App : Application
             services.AddSingleton<IManager, Manager>();
         }
 
-#if DEBUG
-        const string HeroesProfileApi = "http://127.0.0.1:8000/api";
-        const string HeroesProfileWeb = "http://localhost/";
-#else
-            const string HeroesProfileApi = "https://api.heroesprofile.com/";
-            const string HeroesProfileWeb = "https://www.heroesprofile.com/";
-#endif
-
         services
-            .AddHttpClient<PreMatchProcessor>(configureClient: static client => { client.BaseAddress = new Uri(HeroesProfileWeb, UriKind.Absolute); })
+            .AddHttpClient<PreMatchProcessor>(configureClient: client => client.BaseAddress = new Uri(appSettings.HeroesProfileWebUrl, UriKind.Absolute))
+            .AddTypedClient<IPreMatchProcessor, PreMatchProcessor>()
+            .ConfigurePrimaryHttpMessageHandler(() => new MockServerHttpMessageHandler());
+
+        services.AddHttpClient<PostMatchProcessor>(configureClient: client => client.BaseAddress = new Uri(appSettings.HeroesProfileApiUrl, UriKind.Absolute))
             .ConfigurePrimaryHttpMessageHandler(() => new MockServerHttpMessageHandler())
-            .AddTypedClient<IPreMatchProcessor, PreMatchProcessor>();
+            .AddTypedClient<IPostMatchProcessor, PostMatchProcessor>();
 
         services
-            .AddHttpClient<ReplayUploader>(configureClient: static client => { client.BaseAddress = new Uri(HeroesProfileApi, UriKind.Absolute); })
+            .AddHttpClient<ReplayUploader>(configureClient: client => client.BaseAddress = new Uri(appSettings.HeroesProfileApiUrl, UriKind.Absolute))
             .ConfigurePrimaryHttpMessageHandler(() => new MockServerHttpMessageHandler())
             .AddTypedClient<IReplayUploader, ReplayUploader>();
 
 
         services.AddSingleton<MainWindowViewModel>();
         services.AddSingleton<IReplayStorer, ReplayStorer>();
-        services.AddSingleton<IGameMonitor, GameMonitor>();
+        services.AddSingleton<IFileMonitor, FileMonitor>();
         services.AddSingleton<IReplayAnalyzer, ReplayAnalyzer>();
-        services.PostConfigure<AppSettings>(options => { options.PostConfigure(); });
+
+        services.PostConfigure<AppSettings>(options => { options.CreateAppDataIfNotExists(); });
 
         return services.BuildServiceProvider();
     }

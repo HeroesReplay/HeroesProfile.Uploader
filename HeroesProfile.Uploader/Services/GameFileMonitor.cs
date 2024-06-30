@@ -1,44 +1,67 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using HeroesProfile.Uploader.Models;
 using Microsoft.Extensions.Logging;
 
 namespace HeroesProfile.Uploader.Services;
 
-public interface IGameMonitor
+public interface IFileMonitor
 {
-    event EventHandler<EventArgs<string>> TempBattleLobbyCreated;
+    event EventHandler<EventArgs<string>> BattleLobbyCreated;
     event EventHandler<EventArgs<string>> StormSaveCreated;
+    event EventHandler<EventArgs<string>> StormReplayCreated;
 
-    void StartBattleLobby();
-    void StartStormSave();
-    void StopBattleLobbyWatcher();
-    void StopStormSaveWatcher();
-    bool IsBattleLobbyRunning();
-    bool IsStormSaveRunning();
-    IEnumerable<string> GetStormReplays();
+    public bool IsBattleLobbyEnabled { get; set; }
+    public bool IsStormSaveEnabled { get; set; }
+
+    IEnumerable<StormReplayInfo> GetAllStormReplayFiles();
 }
 
-public sealed class GameMonitor : IGameMonitor
+public sealed class FileMonitor : IFileMonitor
 {
     private readonly string _battleLobbyTempPath = Path.GetTempPath();
 
     private readonly string _stormSavePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), @"Heroes of the Storm\Accounts");
+    private readonly string _stormReplayPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), @"Heroes of the Storm\Accounts");
 
-    public IEnumerable<string> GetStormReplays()
+    public IEnumerable<StormReplayInfo> GetAllStormReplayFiles()
     {
-        return Directory.EnumerateFiles(_stormSavePath, "*.StormReplay", SearchOption.AllDirectories);
+        return Directory
+            .EnumerateFiles(_stormSavePath, "*.StormReplay", SearchOption.AllDirectories)
+            .Select(x => new StormReplayInfo() { Created = File.GetCreationTime(x), FilePath = x });
     }
 
-
-    public event EventHandler<EventArgs<string>>? TempBattleLobbyCreated;
+    public event EventHandler<EventArgs<string>>? BattleLobbyCreated;
     public event EventHandler<EventArgs<string>>? StormSaveCreated;
+    public event EventHandler<EventArgs<string>>? StormReplayCreated;
+
+    public bool IsBattleLobbyEnabled
+    {
+        get => _battlelobbyWatcher.EnableRaisingEvents;
+        set => _battlelobbyWatcher.EnableRaisingEvents = value;
+    }
+
+    public bool IsStormReplayEnabled
+    {
+        get => _stormSaveWatcher.EnableRaisingEvents;
+        set => _stormSaveWatcher.EnableRaisingEvents = value;
+    }
+
+    public bool IsStormSaveEnabled
+    {
+        get => _stormSaveWatcher.EnableRaisingEvents;
+        set => _stormSaveWatcher.EnableRaisingEvents = value;
+    }
 
     private readonly FileSystemWatcher _battlelobbyWatcher;
-    private readonly FileSystemWatcher _stormsaveWatcher;
-    private readonly ILogger<GameMonitor> _logger;
+    private readonly FileSystemWatcher _stormSaveWatcher;
+    private readonly FileSystemWatcher _stormReplayWatcher;
+    private readonly ILogger<FileMonitor> _logger;
 
-    public GameMonitor(ILogger<GameMonitor> logger)
+
+    public FileMonitor(ILogger<FileMonitor> logger)
     {
         _logger = logger;
 
@@ -46,16 +69,28 @@ public sealed class GameMonitor : IGameMonitor
         _battlelobbyWatcher.Changed -= OnBattleLobbyAdded;
         _battlelobbyWatcher.Changed += OnBattleLobbyAdded;
 
-        _stormsaveWatcher = new FileSystemWatcher() { Path = _stormSavePath, Filter = "*.StormSave", IncludeSubdirectories = true };
-        _stormsaveWatcher.Created -= OnStormSaveAdded;
-        _stormsaveWatcher.Created += OnStormSaveAdded;
+        _stormSaveWatcher = new FileSystemWatcher() { Path = _stormSavePath, Filter = "*.StormSave", IncludeSubdirectories = true };
+        _stormSaveWatcher.Created -= OnStormSaveAdded;
+        _stormSaveWatcher.Created += OnStormSaveAdded;
+
+        _stormReplayWatcher = new FileSystemWatcher() { Path = _stormReplayPath, Filter = "*.StormReplay", IncludeSubdirectories = true };
+        _stormReplayWatcher.Created -= OnStormReplayAdded;
+        _stormReplayWatcher.Created += OnStormReplayAdded;
+    }
+
+    private void OnStormReplayAdded(object sender, FileSystemEventArgs e)
+    {
+        using (_logger.BeginScope("GameMonitor.OnStormReplayAdded")) {
+            _logger.LogDebug("Detected new storm replay: {FullPath}", e.FullPath);
+            StormReplayCreated?.Invoke(this, new EventArgs<string>(e.FullPath));
+        }
     }
 
     private void OnBattleLobbyAdded(object source, FileSystemEventArgs e)
     {
         using (_logger.BeginScope("GameMonitor.OnBattleLobbyAdded")) {
             _logger.LogDebug("Detected new temp live replay: {FullPath}", e.FullPath);
-            TempBattleLobbyCreated?.Invoke(this, new EventArgs<string>(e.FullPath));
+            BattleLobbyCreated?.Invoke(this, new EventArgs<string>(e.FullPath));
         }
     }
 
@@ -66,32 +101,4 @@ public sealed class GameMonitor : IGameMonitor
             StormSaveCreated?.Invoke(this, new EventArgs<string>(e.FullPath));
         }
     }
-
-    public void StartBattleLobby()
-    {
-        _battlelobbyWatcher.EnableRaisingEvents = true;
-        _logger.LogDebug("Started watching for new battlelobby");
-    }
-
-    public void StartStormSave()
-    {
-        _stormsaveWatcher.EnableRaisingEvents = true;
-        _logger.LogDebug($"Started watching for new storm save");
-    }
-
-    public void StopBattleLobbyWatcher()
-    {
-        _battlelobbyWatcher.EnableRaisingEvents = false;
-        _logger.LogDebug($"Stopped watching for new replays");
-    }
-
-    public void StopStormSaveWatcher()
-    {
-        _stormsaveWatcher.EnableRaisingEvents = false;
-        _logger.LogDebug($"Stopped watching for new storm save files");
-    }
-
-    public bool IsBattleLobbyRunning() => _battlelobbyWatcher is { EnableRaisingEvents: true };
-
-    public bool IsStormSaveRunning() => _stormsaveWatcher is { EnableRaisingEvents: true };
 }

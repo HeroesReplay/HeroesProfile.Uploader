@@ -10,7 +10,7 @@ namespace HeroesProfile.Uploader.Services;
 public interface IReplayAnalyzer
 {
     int MinimumBuild { get; set; }
-    StormReplay? Analyze(StormReplayInfo file);
+    void SetAnalysis(StormReplayInfo file);
 }
 
 public class ReplayAnalyzer(ILogger<ReplayAnalyzer> logger) : IReplayAnalyzer
@@ -21,19 +21,23 @@ public class ReplayAnalyzer(ILogger<ReplayAnalyzer> logger) : IReplayAnalyzer
         AllowPTR = false, ShouldParseMessageEvents = false, ShouldParseGameEvents = false, ShouldParseTrackerEvents = false
     };
 
-    public StormReplay? Analyze(StormReplayInfo file)
+    public void SetAnalysis(StormReplayInfo file)
     {
+        logger.LogInformation("Analyzing replay file {Filename}", file.FilePath);
+
         try {
             StormReplayResult result = StormReplay.Parse(file.FilePath, Options);
 
             if (result.Status != StormReplayParseStatus.Success) {
                 file.UploadStatus = UploadStatus.Incomplete;
-                return null;
+                file.StormReplay = null;
+                return;
             }
 
             if (result.Exception != null) {
                 logger.LogError(result.Exception, "Failed to analyze replay file {Filename}", file.FilePath);
-                return null;
+                file.StormReplay = null;
+                return;
             }
 
             var status = GetPreStatus(result.Replay, result.Status);
@@ -45,13 +49,13 @@ public class ReplayAnalyzer(ILogger<ReplayAnalyzer> logger) : IReplayAnalyzer
             }
 
             file.Fingerprint = result.Replay.GetFingerprint();
-
-            return result.Replay;
+            file.StormReplay = result.Replay;
         }
         catch (Exception e) {
             logger.LogError(e, "Failed to analyze replay file {Filename}", file.FilePath);
-            return null;
         }
+
+        logger.LogInformation("Finished analyzing replay file {Filename}", file.FilePath);
     }
 
     private UploadStatus? GetPreStatus(StormReplay replay, StormReplayParseStatus parseResult)

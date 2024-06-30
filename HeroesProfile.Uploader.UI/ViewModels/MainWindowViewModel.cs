@@ -25,31 +25,33 @@ public class MainWindowViewModel : ViewModelBase, IActivatableViewModel
     private ReadOnlyObservableCollection<StormReplayInfo> _files;
     public ReadOnlyObservableCollection<StormReplayInfo> Files => _files;
 
-    private bool _preMatchPage;
-    private bool _postMatchPage;
+    private bool _isPreMatchEnabled;
+    private bool _isPostMatchEnabled;
     private bool _launchOnStart;
     private bool _runInBackground;
 
     private readonly ILogger<MainWindowViewModel> _logger;
     private readonly IManager _manager;
+    private readonly AppSettings _appSettings;
     private readonly UserSettingsStorage _userSettingsStorage;
 
     public MainWindowViewModel(
         ILogger<MainWindowViewModel> logger,
         IManager manager,
+        AppSettings appSettings,
         UserSettingsStorage userSettingsStorage)
     {
         _logger = logger;
         _manager = manager;
+        _appSettings = appSettings;
         _userSettingsStorage = userSettingsStorage;
 
         this.WhenActivated(disposables => {
-
             if (Design.IsDesignMode) return;
-            
-            PreMatchPage = _userSettingsStorage.UserSettings!.PreMatchPage;
-            PostMatchPage = _userSettingsStorage.UserSettings.PostMatchPage;
-            RunInBackground = _userSettingsStorage.UserSettings.MinimizeToTray;
+
+            IsPreMatchEnabled = _userSettingsStorage.UserSettings!.IsPreMatchEnabled;
+            IsPostMatchEnabled = _userSettingsStorage.UserSettings.IsPostMatchEnabled;
+            RunInBackground = _userSettingsStorage.UserSettings.IsMinimizeToTrayEnabled;
 
             PropertyChanged -= OnPropertyChanged;
             PropertyChanged += OnPropertyChanged;
@@ -87,42 +89,43 @@ public class MainWindowViewModel : ViewModelBase, IActivatableViewModel
 
     private async void OnPropertyChanged(object? sender, PropertyChangedEventArgs args)
     {
-        if (args.PropertyName == nameof(RunInBackground)) {
-            _userSettingsStorage.UserSettings.MinimizeToTray = RunInBackground;
-            await _userSettingsStorage.SaveAsync();
-        }
+        if (_userSettingsStorage.UserSettings is not null) {
+            
+            if (args.PropertyName == nameof(RunInBackground)) {
+                _userSettingsStorage.UserSettings.IsMinimizeToTrayEnabled = RunInBackground;
+            }
 
-        if (args.PropertyName == nameof(LaunchOnStart)) {
-            _userSettingsStorage.UserSettings.LaunchOnStart = LaunchOnStart;
-            await _userSettingsStorage.SaveAsync();
-        }
+            if (args.PropertyName == nameof(LaunchOnStart)) {
+                _userSettingsStorage.UserSettings.IsLaunchOnStartEnabled = LaunchOnStart;
+            }
 
-        if (args.PropertyName == nameof(PreMatchPage)) {
-            _userSettingsStorage.UserSettings.PreMatchPage = PreMatchPage;
-            await _userSettingsStorage.SaveAsync();
-        }
+            if (args.PropertyName == nameof(IsPreMatchEnabled)) {
+                _userSettingsStorage.UserSettings.IsPreMatchEnabled = IsPreMatchEnabled;
+            }
 
-        if (args.PropertyName == nameof(PostMatchPage)) {
-            _userSettingsStorage.UserSettings.PostMatchPage = PostMatchPage;
+            if (args.PropertyName == nameof(IsPostMatchEnabled)) {
+                _userSettingsStorage.UserSettings.IsPostMatchEnabled = IsPostMatchEnabled;
+            }
+
             await _userSettingsStorage.SaveAsync();
         }
     }
 
-    public bool PreMatchPage
+    public bool IsPreMatchEnabled
     {
-        get => _preMatchPage;
+        get => _isPreMatchEnabled;
         set {
-            this.RaiseAndSetIfChanged(ref _preMatchPage, value);
-            _manager.PreMatchPage = _preMatchPage;
+            this.RaiseAndSetIfChanged(ref _isPreMatchEnabled, value);
+            _manager.IsPreMatchEnabled = _isPreMatchEnabled;
         }
     }
 
-    public bool PostMatchPage
+    public bool IsPostMatchEnabled
     {
-        get => _postMatchPage;
+        get => _isPostMatchEnabled;
         set {
-            this.RaiseAndSetIfChanged(ref _postMatchPage, value);
-            _manager.PostMatchPage = _postMatchPage;
+            this.RaiseAndSetIfChanged(ref _isPostMatchEnabled, value);
+            _manager.IsPostMatchEnabled = _isPostMatchEnabled;
         }
     }
 
@@ -138,11 +141,11 @@ public class MainWindowViewModel : ViewModelBase, IActivatableViewModel
         set => this.RaiseAndSetIfChanged(ref _launchOnStart, value);
     }
 
-    public void OpenLogsCommand()
+    public void OpenDataFolderCommand()
     {
-        _logger.LogInformation("Opening logs directory");
+        _logger.LogInformation("Opening data directory");
 
-        string path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Heroesprofile", "logs");
+        string path = _appSettings.HeroesProfileAppData.FullName;
 
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
             Process.Start("explorer.exe", path);
@@ -156,7 +159,7 @@ public class MainWindowViewModel : ViewModelBase, IActivatableViewModel
     public void OpenReplaysCommand()
     {
         _logger.LogInformation("Opening replays directory");
-
+        
         string path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), @"Heroes of the Storm\Accounts");
 
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
@@ -168,5 +171,5 @@ public class MainWindowViewModel : ViewModelBase, IActivatableViewModel
         }
     }
 
-    public ViewModelActivator Activator { get; set; }= new ViewModelActivator();
+    public ViewModelActivator Activator { get; set; } = new ViewModelActivator();
 }

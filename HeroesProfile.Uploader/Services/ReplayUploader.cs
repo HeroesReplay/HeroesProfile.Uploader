@@ -14,33 +14,14 @@ namespace HeroesProfile.Uploader.Services;
 
 public interface IReplayUploader
 {
-    bool PostMatchPage { get; set; }
-    Task<StormReplayInfo[]> GetAlreadyUploaded(StormReplayInfo[] replays);
+    bool IsPostMatchEnabled { get; set; }
     Task<UploadStatus> UploadAsync(StormReplayInfo stormReplayInfo);
 }
 
-public class ReplayUploader : IReplayUploader
+public class ReplayUploader(ILogger<ReplayUploader> logger, HttpClient httpClient, IPostMatchProcessor postMatchProcessor) : IReplayUploader
 {
-    private readonly ILogger<ReplayUploader> _logger;
-    private readonly HttpClient _httpClient;
+    public bool IsPostMatchEnabled { get; set; }
 
-    public ReplayUploader(ILogger<ReplayUploader> logger, HttpClient httpClient)
-    {
-        _logger = logger;
-        _httpClient = httpClient;
-    }
-
-    public bool PostMatchPage { get; set; }
-
-#if DEBUG
-    const string HeroesProfileApiEndpoint = "http://127.0.0.1:8000/api";
-    const string HeroesProfileMatchParsed = "http://127.0.0.1:8000/";
-    const string HeroesProfileMatchSummary = "http://localhost/Match/Single/?replayID=";
-#else
-    const string HeroesProfileApiEndpoint = "https://api.heroesprofile.com/api";
-    const string HeroesProfileMatchParsed = "https://api.heroesprofile.com/openApi/Replay/Parsed/?replayID=";
-    const string HeroesProfileMatchSummary = "https://www.heroesprofile.com/Match/Single/?replayID=";
-#endif
 
     public async Task<UploadStatus> UploadAsync(StormReplayInfo stormReplayInfo)
     {
@@ -52,7 +33,7 @@ public class ReplayUploader : IReplayUploader
         var items = await GetAlreadyUploaded([stormReplayInfo]);
 
         if (items.Length > 0) {
-            _logger.LogInformation("File {StormReplayInfo} marked as duplicate", stormReplayInfo);
+            logger.LogInformation("File {StormReplayInfo} marked as duplicate", stormReplayInfo);
             stormReplayInfo.UploadStatus = UploadStatus.Duplicate;
         }
 
@@ -63,9 +44,10 @@ public class ReplayUploader : IReplayUploader
         return stormReplayInfo.UploadStatus;
     }
 
-    public async Task<StormReplayInfo[]> GetAlreadyUploaded(StormReplayInfo[] replays)
+    private async Task<StormReplayInfo[]> GetAlreadyUploaded(StormReplayInfo[] replays)
     {
         HashSet<string> fingerprints = new();
+
         foreach (var item in replays) {
             ArgumentException.ThrowIfNullOrWhiteSpace(nameof(item.Fingerprint), nameof(replays));
             fingerprints.Add(item.Fingerprint!);
@@ -73,7 +55,7 @@ public class ReplayUploader : IReplayUploader
 
         try {
             var payload = new StringContent(String.Join('\n', fingerprints));
-            var response = await _httpClient.PostAsync("/replays/fingerprints", payload);
+            var response = await httpClient.PostAsync("/replays/fingerprints", payload);
 
             if (response.IsSuccessStatusCode) {
                 var json = await response.Content.ReadAsStringAsync();
@@ -82,7 +64,7 @@ public class ReplayUploader : IReplayUploader
             }
         }
         catch (Exception ex) {
-            _logger.LogError(ex, $"Error checking fingerprint array");
+            logger.LogError(ex, $"Error checking fingerprint array");
         }
 
         return [];
@@ -92,78 +74,33 @@ public class ReplayUploader : IReplayUploader
     {
         var filePath = stormReplayInfo.FilePath;
         var version = "Avalonia";
-        UploadStatus result;
+        HttpResponseMessage? response;
 
-        using (var content = new MultipartFormDataContent()) {
+        using (MultipartFormDataContent content = new MultipartFormDataContent()) {
             content.Add(new StreamContent(File.OpenRead(stormReplayInfo.FilePath)), "file", stormReplayInfo.FileName);
-
-            var response = await _httpClient.PostAsync($"upload/heroesprofile/desktop?fingerprint={stormReplayInfo.Fingerprint}&version={version}", content);
-
-            if (response.IsSuccessStatusCode) {
-
-                try {
-                    UploadResult? uploadResult = await response.Content.ReadFromJsonAsync<UploadResult>();
-
-                    if (uploadResult is null)
-                        throw new Exception("Failed to parse UploadResult response");
-
-                    result = uploadResult.Status;
-
-                    await CheckPostMatch(stormReplayInfo, uploadResult);                    
-                }
-                catch (Exception e) {
-                    _logger.LogError(e, "Error parsing upload response");
-                    return UploadStatus.UploadError;
-                }
-
-            } else {
-                _logger.LogWarning("Error uploading file {FileName}: {Response}", filePath, response.StatusCode);
-                return UploadStatus.UploadError;
-            }
+            response = await httpClient.PostAsync($"upload/heroesprofile/desktop?fingerprint={stormReplayInfo.Fingerprint}&version={version}", content);
         }
 
-        return result;
-    }
-
-    private async Task CheckPostMatch(StormReplayInfo stormReplayInfo, UploadResult result)
-    {
-        try {
-            if (PostMatchPage) {
-                bool isValidPostMatchCondition =
-                    result.ReplayId != 0 &&
-                    File.GetLastWriteTime(stormReplayInfo.FilePath) >= DateTime.Now.Subtract(TimeSpan.FromMinutes(60));
-
-                if (isValidPostMatchCondition) {
-                    await PostMatchAnalysis(result.ReplayId);
-                } else {
-                    _logger.LogWarning("Failed to open match page for replay {ReplayId} due to invalid condition", result.ReplayId);
-                }
-            }
-        }
-        catch (Exception e) {
-            _logger.LogError(e, "Failed to open match page");
-        }
-    }
-
-    private async Task PostMatchAnalysis(int replayId)
-    {
-        var response = await _httpClient.GetAsync($"openApi/Replay/Parsed/?replayID={replayId}");
-        
         if (response.IsSuccessStatusCode) {
-            var body = await response.Content.ReadAsStringAsync();
+            try {
+                UploadResult? uploadResult = await response.Content.ReadFromJsonAsync<UploadResult>();
 
-            if ("true".Equals(body, StringComparison.OrdinalIgnoreCase)) {
-                
-                var postMatchLink = $"{HeroesProfileMatchSummary}{replayId}";
-                
-                if (OperatingSystem.IsMacOS()) {
-                    Process.Start("open", postMatchLink);
-                } else if (OperatingSystem.IsWindows()) {
-                    Process.Start(new ProcessStartInfo(postMatchLink) { UseShellExecute = true });
+                if (uploadResult is null) {
+                    throw new Exception("Failed to parse UploadResult response");
                 }
+
+                stormReplayInfo.UploadStatus = uploadResult.Status;
+                if (IsPostMatchEnabled) {
+                    await postMatchProcessor.OpenPostMatchPage(stormReplayInfo, uploadResult);
+                    return stormReplayInfo.UploadStatus;
+                }
+            }
+            catch (Exception e) {
+                logger.LogError(e, "Error parsing upload response");
             }
         }
 
-        _logger.LogWarning("Failed to open match page for replay {ReplayId}", replayId);
+        logger.LogWarning("Error uploading file {FileName}: {Response}", filePath, response.StatusCode);
+        return UploadStatus.UploadError;
     }
 }

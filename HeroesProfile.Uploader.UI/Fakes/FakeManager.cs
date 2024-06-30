@@ -23,8 +23,8 @@ public class FakeManager : IManager
         Stop();
     }
 
-    public bool PreMatchPage { get; set; }
-    public bool PostMatchPage { get; set; }
+    public bool IsPreMatchEnabled { get; set; }
+    public bool IsPostMatchEnabled { get; set; }
 
     public async Task StartAsync(CancellationToken token = default)
     {

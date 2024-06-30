@@ -16,9 +16,9 @@ public interface IReplayStorer
     Task<StoredReplayInfo[]> LoadAsync();
 }
 
-public class ReplayStorer(ILogger<ReplayStorer> logger, IOptions<AppSettings> settings) : IReplayStorer, IDisposable
+public class ReplayStorer(ILogger<ReplayStorer> logger, AppSettings appSettings) : IReplayStorer, IDisposable
 {
-    private readonly string _filePath = Path.Combine(settings.Value.HeroesProfileAppData.FullName, "replays.json");
+    private readonly string _filePath = Path.Combine(appSettings.HeroesProfileAppData.FullName, "replays.json");
 
     private static readonly SemaphoreSlim SemaphoreSlim = new(1, 1);
 

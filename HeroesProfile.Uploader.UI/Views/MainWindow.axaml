@@ -14,24 +14,25 @@
         Title="HeroesProfile Uploader">
 
     <Window.Styles>
-        <Style Selector="TextBlock.Success">
-            <Setter
-                Property="Foreground"
-                Value="{DynamicResource SystemAccentColor}" />
-        </Style>
-        <Style Selector="TextBlock.Error">
-            <Setter
-                Property="Foreground"
-                Value="{DynamicResource SystemErrorTextColor}" />
-        </Style>
-        <Style Selector="TextBlock.Warning">
-            <Setter Property="Foreground" Value="Orange" />
-        </Style>
+        <!-- <Style Selector="TextBlock.Success"> -->
+        <!--     <Setter -->
+        <!--         Property="Foreground" -->
+        <!--         Value="{DynamicResource SystemAccentColor}" /> -->
+        <!-- </Style> -->
+        <!-- <Style Selector="TextBlock.Error"> -->
+        <!--     <Setter -->
+        <!--         Property="Foreground" -->
+        <!--         Value="{DynamicResource SystemErrorTextColor}" /> -->
+        <!-- </Style> -->
+        <!-- <Style Selector="TextBlock.Warning"> -->
+        <!--     <Setter Property="Foreground" Value="Orange" /> -->
+        <!-- </Style> -->
     </Window.Styles>
 
     <Window.Resources>
         <ResourceDictionary>
             <converters:UploadStatusEnumToStringConverter x:Key="UploadStatusEnumToStringConverter" />
+            <converters:UploadColorConverter x:Key="UploadColorConverter" />
         </ResourceDictionary>
     </Window.Resources>
 
@@ -66,11 +67,11 @@
                 </DockPanel>
             </Button>
             <Button Margin="2"
-                    Command="{Binding OpenLogsCommand}"
+                    Command="{Binding OpenDataFolderCommand}"
                     IsEnabled="True"
                     HorizontalContentAlignment="Stretch" Width="150">
                 <DockPanel HorizontalAlignment="Stretch">
-                    <TextBlock>Open Logs</TextBlock>
+                    <TextBlock>Open App Data</TextBlock>
                     <PathIcon Data="{DynamicResource folder_open_regular}"
                               HorizontalAlignment="Right" />
                 </DockPanel>
@@ -89,12 +90,13 @@
                 <DataTemplate DataType="models:StormReplayInfo">
                     <DockPanel LastChildFill="False">
                         <TextBlock Text="{Binding FileName}" />
+
                         <TextBlock Padding="0, 0, 5, 0"
                                    DockPanel.Dock="Right"
                                    Classes.Success="{Binding IsSuccess}"
                                    Classes.Warning="{Binding IsWarning}"
                                    Classes.Error="{Binding IsError}"
-
+                                   Foreground="{Binding UploadStatus, Converter={StaticResource UploadColorConverter} }"
                                    Text="{Binding UploadStatus,
                             Converter={StaticResource UploadStatusEnumToStringConverter} }" />
                     </DockPanel>
@@ -123,19 +125,23 @@
 
             <StackPanel Margin="5" Orientation="Vertical" DockPanel.Dock="Bottom">
 
-                <CheckBox IsChecked="{Binding LaunchOnStart}"
-                          Content="Launch on start"
-                          ToolTip.Tip="Auto launch on system start up" />
+                <CheckBox
+                    IsChecked="{Binding LaunchOnStart}"
+                    Content="Launch on start"
+                    ToolTip.Tip="Auto launch on system start up" />
 
-                <CheckBox IsChecked="{Binding RunInBackground}"
-                          Content="Run in background"
-                          ToolTip.Tip="Minimizing the app will hide the window" />
+                <CheckBox
+                    IsChecked="{Binding RunInBackground}"
+                    Content="Run in background"
+                    ToolTip.Tip="Minimizing the app will hide the window" />
 
-                <CheckBox IsChecked="{Binding PreMatchPage}"
-                          Content="Open Pre-Match"
-                          ToolTip.Tip="Open the pre-match page on Heroes Profile" />
+                <CheckBox
+                    IsVisible="True"
+                    IsChecked="{Binding IsPreMatchEnabled}"
+                    Content="Open Pre-Match"
+                    ToolTip.Tip="Open the pre-match page on Heroes Profile" />
 
-                <CheckBox IsChecked="{Binding PostMatchPage}"
+                <CheckBox IsChecked="{Binding IsPostMatchEnabled}"
                           Content="Open Post-Match"
                           ToolTip.Tip="Open the post-match page on Heroes Profile" />
 

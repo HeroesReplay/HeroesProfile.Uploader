@@ -2,6 +2,23 @@ using System.Collections.Generic;
 
 namespace HeroesProfile.Uploader.Models;
 
+public class ReplayFileComparer : IEqualityComparer<StormReplayInfo>
+{
+    public bool Equals(StormReplayInfo? x, StormReplayInfo? y)
+    {
+        if (x == null || y == null) {
+            return false;
+        }
+        
+        return x.FilePath == y.FilePath && x.Created == y.Created;
+    }
+
+    public int GetHashCode(StormReplayInfo obj)
+    {
+        return obj.FilePath.GetHashCode() ^ obj.Created.GetHashCode();
+    }
+}
+
 public class StormReplayInfoComparer : IComparer<StormReplayInfo>, IEqualityComparer<StormReplayInfo>
 {
     public int Compare(StormReplayInfo? x, StormReplayInfo? y)
