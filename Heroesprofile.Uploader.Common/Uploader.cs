@@ -121,6 +121,7 @@ namespace Heroesprofile.Uploader.Common
                     }
                     if (response == "true") {
                         Process.Start($"{HeroesProfileMatchSummary}{replayID}");
+                        WebhookNotifier.Notify("postmatch", $"{HeroesProfileMatchSummary}{replayID}");
                         return;
                     }
                 }

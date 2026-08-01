@@ -91,6 +91,7 @@ namespace Heroesprofile.Uploader.Common
 
                 if (Int32.TryParse(responseString, out int value)) {
                     Process.Start($"{heresprofile}{preMatchURI}{value}");
+                    WebhookNotifier.Notify("prematch", $"{heresprofile}{preMatchURI}{value}");
                 } else {
                     _log.Error($"Integer value not returned for postmatch replayID.  Response string: {responseString}");
                 }

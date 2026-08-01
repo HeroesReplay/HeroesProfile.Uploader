@@ -120,7 +120,8 @@ namespace Heroesprofile.Uploader.Windows
 
             Manager.PreMatchPage = Settings.PreMatchPage;
             Manager.PostMatchPage = Settings.PostMatchPage;
-    
+            WebhookNotifier.WebhookUrl = Settings.WebhookUrl;
+
             Manager.DeleteAfterUpload = Settings.DeleteAfterUpload;
 
             ApplyTheme(Settings.Theme);
@@ -139,6 +140,10 @@ namespace Heroesprofile.Uploader.Windows
 
                 if (ev.PropertyName == nameof(Settings.PostMatchPage)) {
                     Manager.PostMatchPage = Settings.PostMatchPage;
+                }
+
+                if (ev.PropertyName == nameof(Settings.WebhookUrl)) {
+                    WebhookNotifier.WebhookUrl = Settings.WebhookUrl;
                 }
 
             };
