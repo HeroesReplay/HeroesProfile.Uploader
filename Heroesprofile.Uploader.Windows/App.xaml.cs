@@ -121,6 +121,7 @@ namespace Heroesprofile.Uploader.Windows
             Manager.PreMatchPage = Settings.PreMatchPage;
             Manager.PostMatchPage = Settings.PostMatchPage;
             WebhookNotifier.WebhookUrl = Settings.WebhookUrl;
+            ReplayLocation.CustomPath = Settings.ReplayPath;
 
             Manager.DeleteAfterUpload = Settings.DeleteAfterUpload;
 
@@ -146,6 +147,11 @@ namespace Heroesprofile.Uploader.Windows
                     WebhookNotifier.WebhookUrl = Settings.WebhookUrl;
                 }
 
+                if (ev.PropertyName == nameof(Settings.ReplayPath)) {
+                    // Manager rebuilds its watchers and rescans when this changes
+                    ReplayLocation.CustomPath = Settings.ReplayPath;
+                }
+
             };
 
 
@@ -157,6 +163,8 @@ namespace Heroesprofile.Uploader.Windows
             }
             Manager.Start(new Monitor(), new LiveMonitor(), new Analyzer(), new Common.Uploader(), new LiveProcessor(Manager.PreMatchPage));
 
+            WarnIfReplayFolderMissing();
+
 #pragma warning disable 162
             if (!NoSquirrel) {
                 //Check for updates on startup and then every hour
@@ -167,6 +175,22 @@ namespace Heroesprofile.Uploader.Windows
                 }.Tick += (_, __) => CheckForUpdates();
             }
 #pragma warning restore 162
+        }
+
+        /// <summary>
+        /// Without a replay folder the uploader silently does nothing, which is exactly what users hit when
+        /// Documents has been relocated or the app runs in a Wine/Proton prefix. Point them at the setting.
+        /// </summary>
+        private void WarnIfReplayFolderMissing()
+        {
+            if (ReplayLocation.IsAvailable()) {
+                return;
+            }
+            _log.Warn($"Replay folder not found: {ReplayLocation.Current}");
+            MessageBox.Show(
+                $"Could not find your replay folder:\n\n{ReplayLocation.Current}\n\n" +
+                "Open Settings and select the Heroes of the Storm \"Accounts\" folder that holds your replays.",
+                "Replay folder not found", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
 
         private void Application_Exit(object sender, ExitEventArgs e)

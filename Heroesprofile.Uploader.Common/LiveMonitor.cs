@@ -12,9 +12,10 @@ namespace Heroesprofile.Uploader.Common
     {
         private static Logger _log = LogManager.GetCurrentClassLogger();
         protected readonly string BattleLobbyTempPath = Path.GetTempPath();
-        protected readonly string StormSavePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), @"Heroes of the Storm\Accounts");
+        protected string StormSavePath { get { return ReplayLocation.Current; } }
         protected FileSystemWatcher _battlelobby_watcher;
         protected FileSystemWatcher _stormsave_watcher;
+        private string _watchedStormSavePath;
 
         public event EventHandler<EventArgs<string>> TempBattleLobbyCreated;
         public event EventHandler<EventArgs<string>> StormSaveCreated;
@@ -57,18 +58,33 @@ namespace Heroesprofile.Uploader.Common
         /// </summary>
         public void StartStormSave()
         {
-            if (_stormsave_watcher == null) {
-                _stormsave_watcher = new FileSystemWatcher() {
-                    Path = StormSavePath,
-                    Filter = "*.StormSave",
-                    IncludeSubdirectories = true
-                };
+            if (_stormsave_watcher != null && _watchedStormSavePath != StormSavePath) {
+                // replay folder was changed in settings, rebuild the watcher around the new one
+                _stormsave_watcher.EnableRaisingEvents = false;
                 _stormsave_watcher.Created -= OnStormSaveAdded;
-                _stormsave_watcher.Created += OnStormSaveAdded;
+                _stormsave_watcher.Dispose();
+                _stormsave_watcher = null;
+            }
+            if (_stormsave_watcher == null) {
+                try {
+                    _stormsave_watcher = new FileSystemWatcher() {
+                        Path = StormSavePath,
+                        Filter = "*.StormSave",
+                        IncludeSubdirectories = true
+                    };
+                    _stormsave_watcher.Created -= OnStormSaveAdded;
+                    _stormsave_watcher.Created += OnStormSaveAdded;
+                    _watchedStormSavePath = StormSavePath;
+                }
+                catch (Exception ex) {
+                    _log.Error(ex, $"Failed to watch replay directory for storm saves: {StormSavePath}");
+                    _stormsave_watcher = null;
+                    return;
+                }
             }
             _stormsave_watcher.EnableRaisingEvents = true;
 
-            _log.Debug($"Started watching for new storm save");
+            _log.Debug($"Started watching for new storm save in {StormSavePath}");
         }
 
 

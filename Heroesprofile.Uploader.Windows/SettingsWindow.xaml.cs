@@ -1,5 +1,9 @@
-﻿using System;
+﻿using Heroesprofile.Uploader.Common;
+
+using System;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -25,12 +29,91 @@ namespace Heroesprofile.Uploader.Windows
             if (App.Settings.AllowPreReleases) {
                 PreReleasePanel.Visibility = Visibility.Visible;
             }
+            RefreshReplayPathStatus();
+        }
+
+        /// <summary>
+        /// Empty disables the webhook, anything else has to be an http(s) url
+        /// </summary>
+        private static bool IsValidWebhookUrl(string url)
+        {
+            return url == "" ||
+                (Uri.TryCreate(url, UriKind.Absolute, out Uri parsed) &&
+                (parsed.Scheme == Uri.UriSchemeHttp || parsed.Scheme == Uri.UriSchemeHttps));
         }
 
         private void Window_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.Key == Key.Z && Keyboard.Modifiers == ModifierKeys.Control) {
                 PreReleasePanel.Visibility = Visibility.Visible;
+            }
+        }
+
+        private void Window_Closing(object sender, CancelEventArgs e)
+        {
+            // don't let a broken webhook url get saved, the user has to fix or clear it
+            if (!IsValidWebhookUrl(WebhookUrlBox.Text.Trim())) {
+                WebhookError.Visibility = Visibility.Visible;
+                WebhookUrlBox.Focus();
+                e.Cancel = true;
+                return;
+            }
+            WebhookUrlBox.Text = WebhookUrlBox.Text.Trim();
+
+            // commit values typed but never tabbed out of, then persist them
+            ReplayPathBox.GetBindingExpression(TextBox.TextProperty)?.UpdateSource();
+            WebhookUrlBox.GetBindingExpression(TextBox.TextProperty)?.UpdateSource();
+            App.Settings.Save();
+        }
+
+        private void WebhookUrlBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (WebhookError.Visibility == Visibility.Visible && IsValidWebhookUrl(WebhookUrlBox.Text.Trim())) {
+                WebhookError.Visibility = Visibility.Collapsed;
+            }
+        }
+
+        private void BrowseReplayPath_Click(object sender, RoutedEventArgs e)
+        {
+            using (var dialog = new System.Windows.Forms.FolderBrowserDialog()) {
+                dialog.Description = "Select the Heroes of the Storm 'Accounts' folder";
+                var current = ReplayPathBox.Text;
+                if (!string.IsNullOrWhiteSpace(current) && Directory.Exists(current)) {
+                    dialog.SelectedPath = current;
+                } else if (Directory.Exists(ReplayLocation.DefaultPath)) {
+                    dialog.SelectedPath = ReplayLocation.DefaultPath;
+                }
+
+                if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK) {
+                    ReplayPathBox.Text = dialog.SelectedPath;
+                    ReplayPathBox.GetBindingExpression(TextBox.TextProperty)?.UpdateSource();
+                }
+            }
+        }
+
+        private void ResetReplayPath_Click(object sender, RoutedEventArgs e)
+        {
+            ReplayPathBox.Text = "";
+            ReplayPathBox.GetBindingExpression(TextBox.TextProperty)?.UpdateSource();
+        }
+
+        private void ReplayPathBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            RefreshReplayPathStatus();
+        }
+
+        /// <summary>
+        /// Tell the user right away whether the folder they picked actually exists
+        /// </summary>
+        private void RefreshReplayPathStatus()
+        {
+            var path = string.IsNullOrWhiteSpace(ReplayPathBox.Text) ? ReplayLocation.DefaultPath : ReplayPathBox.Text.Trim();
+            var found = Directory.Exists(path);
+            ReplayPathStatus.Text = found ? $"Found: {path}" : $"Folder not found: {path}";
+            if (found) {
+                ReplayPathStatus.ClearValue(ForegroundProperty); // keep the current theme's color
+            } else {
+                ReplayPathStatus.Foreground = Brushes.OrangeRed;
             }
         }
     }

@@ -63,8 +63,8 @@
                 <CheckBox IsChecked="{Binding App.Settings.MinimizeToTray}" Content="Minimize to tray" Height="23"  />
                 <CheckBox IsChecked="{Binding App.Settings.PreMatchPage}" Content="Prematch Page" Height="23"  Margin="0,0,8,0" IsEnabled="True"  />
                 <CheckBox IsChecked="{Binding App.Settings.PostMatchPage}" Content="Postmatch Page" Height="23"  Margin="0,0,8,0" IsEnabled="True"  />
-                <Button x:Name="WebhookButton" HorizontalAlignment="Stretch" Content="Set Webhook" Click="Webhook_Click" Margin="0, 8, 0, 0"
-                        ToolTip="Optional. Prematch and postmatch page urls will be POSTed to this url as json" />
+                <Button HorizontalAlignment="Stretch" Content="Settings" Click="Settings_Click" Margin="0, 8, 0, 0"
+                        ToolTip="Replay folder, webhook and theme" />
                 <Button HorizontalAlignment="Stretch" Content="Show log" Click="ShowLog_Click" Margin="0, 4, 0, 0" />
                 <Button HorizontalAlignment="Stretch" Content="Check for update" Click="CheckForUpdate_Click" Margin="0, 4, 0, 0" />
             </StackPanel>
