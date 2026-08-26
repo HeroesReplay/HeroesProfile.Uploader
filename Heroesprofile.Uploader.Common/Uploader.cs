@@ -16,16 +16,20 @@ namespace Heroesprofile.Uploader.Common
     public class Uploader : IUploader
     {
         private static readonly Logger _log = LogManager.GetCurrentClassLogger();
+        // v1, served from the main site. api.heroesprofile.com keeps answering the
+        // old paths for already-deployed clients, but it is not a base URL to build
+        // against — once DNS moves, everything on it except those aliases redirects
+        // here. The upload routes stay keyless, so there is still no token to send.
 #if DEBUG
-        const string HeroesProfileApiEndpoint = "http://127.0.0.1:8000/api";
-        const string HeroesProfileMatchParsed = "http://127.0.0.1:8000/openApi/Replay/Parsed/?replayID=";
+        const string HeroesProfileApiEndpoint = "http://127.0.0.1:8000/api/external/v1";
+        const string HeroesProfileMatchParsed = "http://127.0.0.1:8000/api/external/v1/replays/parsed?replayID=";
         const string HeroesProfileMatchSummary = "http://localhost/Match/Single/?replayID=";
 
 
 
 #else
-        const string HeroesProfileApiEndpoint = "https://api.heroesprofile.com/api";
-        const string HeroesProfileMatchParsed = "https://api.heroesprofile.com/openApi/Replay/Parsed/?replayID=";
+        const string HeroesProfileApiEndpoint = "https://www.heroesprofile.com/api/external/v1";
+        const string HeroesProfileMatchParsed = "https://www.heroesprofile.com/api/external/v1/replays/parsed?replayID=";
         const string HeroesProfileMatchSummary = "https://www.heroesprofile.com/Match/Single/?replayID=";
 #endif
 
