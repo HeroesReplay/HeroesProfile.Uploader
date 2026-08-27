@@ -23,10 +23,13 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      # Heroes.ReplayParser is a submodule, and the solution will not restore without it
+      # Heroes.ReplayParser is a submodule, and the solution will not restore without
+      # it. Its GitVersionTask walks back to the first commit to derive a version, so
+      # the default shallow clone is not enough - depth 0 applies to submodules too.
       - uses: actions/checkout@v5
         with:
           submodules: recursive
+          fetch-depth: 0
 
       # The runner image does not always carry the 4.6.2 reference assemblies,
       # and without them the build dies with MSB3644.
