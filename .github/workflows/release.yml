@@ -69,6 +69,9 @@ jobs:
           gh release view $tag *> $null
           $exists = $LASTEXITCODE -eq 0
           $PSNativeCommandUseErrorActionPreference = $true
+          # Actions ends every pwsh step with `exit $LASTEXITCODE`, so a handled
+          # non-zero from gh still fails the step unless it is cleared
+          $global:LASTEXITCODE = 0
           if ($exists) {
             throw "Release $tag already exists - bump AssemblyVersion, or delete it with: gh release delete $tag"
           }
@@ -96,6 +99,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) {
             Write-Warning "Could not seed from $previous - this build will publish a full package only"
           }
+          $global:LASTEXITCODE = 0
 
       - name: Restore
         run: msbuild Heroesprofile.Uploader.sln -t:Restore -v:minimal
