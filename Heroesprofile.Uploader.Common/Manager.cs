@@ -134,12 +134,27 @@ namespace Heroesprofile.Uploader.Common
                     _live_monitor.StopBattleLobbyWatcher();
                     _liveProcessor = new LiveProcessor(PreMatchPage);
 
-                    await EnsureFileAvailable(e.Data);
                     var tmpPath = Path.GetTempFileName();
-                    await SafeCopy(e.Data, tmpPath, true);
-                    await _liveProcessor.StartProcessing(tmpPath);
-
-                    _live_monitor.StartBattleLobby();
+                    try {
+                        await EnsureFileAvailable(e.Data);
+                        _log.Debug($"Copying battlelobby '{e.Data}' to '{tmpPath}'");
+                        await SafeCopy(e.Data, tmpPath, true);
+                        await _liveProcessor.StartProcessing(tmpPath);
+                    }
+                    catch (Exception ex) {
+                        // without this the watcher below never restarts and the exception escapes
+                        // an async void handler, which takes the process down with it
+                        _log.Error(ex, $"Error processing battlelobby '{e.Data}'");
+                    }
+                    finally {
+                        try {
+                            File.Delete(tmpPath);
+                        }
+                        catch (Exception ex) {
+                            _log.Debug($"Could not delete temp battlelobby copy '{tmpPath}': {ex.Message}");
+                        }
+                        _live_monitor.StartBattleLobby();
+                    }
                 };
 
                 _live_monitor.StartBattleLobby();

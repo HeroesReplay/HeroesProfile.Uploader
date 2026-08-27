@@ -125,6 +125,12 @@ namespace Heroesprofile.Uploader.Windows
 
             Manager.DeleteAfterUpload = Settings.DeleteAfterUpload;
 
+            // the live pages are the part users most often report as "not working", and their log
+            // is the only thing we get back - so say up front how they were configured
+            _log.Info($"Settings: PreMatchPage={Settings.PreMatchPage}, PostMatchPage={Settings.PostMatchPage}, " +
+                $"Webhook={(string.IsNullOrWhiteSpace(Settings.WebhookUrl) ? "off" : "on")}, " +
+                $"ReplayPath={(string.IsNullOrWhiteSpace(Settings.ReplayPath) ? "auto" : Settings.ReplayPath)}");
+
             ApplyTheme(Settings.Theme);
 
             Settings.PropertyChanged += (o, ev) => {
