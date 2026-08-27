@@ -1,0 +1,119 @@
+name: Release
+
+# Push a tag that matches the AssemblyVersion in
+# Heroesprofile.Uploader.Windows\Properties\AssemblyInfo.cs, e.g.
+#
+#   git tag v2.6.0 && git push origin v2.6.0
+#
+# This runs the same Zip and Installer solution configurations the maintainer
+# runs from Visual Studio (see SquirrelRelease.txt) and publishes the five
+# assets Squirrel's GitHubUpdateManager expects.
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag to build and release (e.g. v2.6.0)'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      # The runner image does not always carry the 4.6.2 reference assemblies,
+      # and without them the build dies with MSB3644.
+      - name: Ensure .NET Framework 4.6.2 targeting pack
+        shell: pwsh
+        run: |
+          $ref = "C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.6.2"
+          if (-not (Test-Path $ref)) {
+            choco install netfx-4.6.2-devpack -y --no-progress
+          }
+
+      - uses: microsoft/setup-msbuild@v2
+
+      - name: Resolve version
+        id: version
+        shell: pwsh
+        run: |
+          $tag = "${{ github.event.inputs.tag || github.ref_name }}"
+          $assemblyInfo = Get-Content 'Heroesprofile.Uploader.Windows\Properties\AssemblyInfo.cs' -Raw
+          if ($assemblyInfo -notmatch '(?m)^\[assembly: AssemblyVersion\("(\d+\.\d+\.\d+)') {
+            throw "Could not read a three-part AssemblyVersion out of AssemblyInfo.cs"
+          }
+          $version = $Matches[1]
+          if ($tag.TrimStart('v') -ne $version) {
+            throw "Tag $tag does not match AssemblyVersion $version - bump AssemblyInfo.cs and retag"
+          }
+          "tag=$tag"         | Out-File $env:GITHUB_OUTPUT -Append
+          "version=$version" | Out-File $env:GITHUB_OUTPUT -Append
+
+      # Squirrel builds the delta against the previous -full.nupkg and appends to
+      # the existing RELEASES index. Neither is in git, so pull them back off the
+      # last published release or every build would ship a full-only feed.
+      - name: Seed Releases folder from the previous release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          New-Item -ItemType Directory -Force Releases | Out-Null
+          $previous = gh release list --limit 1 --json tagName --jq '.[0].tagName'
+          if (-not $previous) {
+            Write-Host "No previous release found, this build will publish a full package only"
+            return
+          }
+          Write-Host "Seeding from $previous"
+          gh release download $previous --dir Releases --pattern 'RELEASES' --pattern '*-full.nupkg'
+
+      - name: Restore
+        run: msbuild Heroesprofile.Uploader.sln -t:Restore -v:minimal
+
+      # Both configurations write into .\Releases. Keep building the solution
+      # rather than the project: the .sln is what pins Heroes.ReplayParser to
+      # Debug and Common to Release under these configurations.
+      - name: Build zip
+        run: msbuild Heroesprofile.Uploader.sln -p:Configuration=Zip -v:minimal -m
+
+      - name: Build installer
+        run: msbuild Heroesprofile.Uploader.sln -p:Configuration=Installer -v:minimal
+
+      - name: Check the assets are all there
+        shell: pwsh
+        run: |
+          $version = "${{ steps.version.outputs.version }}"
+          $expected = @(
+            "Releases\RELEASES",
+            "Releases\HeroesProfileUploaderSetup.exe",
+            "Releases\HeroesProfile.zip",
+            "Releases\Heroesprofile.Uploader-$version-full.nupkg"
+          )
+          $missing = $expected | Where-Object { -not (Test-Path $_) }
+          if ($missing) { throw "Build did not produce: $($missing -join ', ')" }
+          if (-not (Test-Path "Releases\Heroesprofile.Uploader-$version-delta.nupkg")) {
+            Write-Warning "No delta package - existing installs will take the full download"
+          }
+
+      - name: Publish release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "${{ steps.version.outputs.tag }}"
+          $version = "${{ steps.version.outputs.version }}"
+          # version-globbed: the seed step left the previous release's full package in here too
+          $assets = @(
+            "Releases\RELEASES",
+            "Releases\HeroesProfileUploaderSetup.exe",
+            "Releases\HeroesProfile.zip"
+          ) + (Get-ChildItem "Releases\Heroesprofile.Uploader-$version-*.nupkg" | ForEach-Object { $_.FullName })
+          gh release create $tag $assets --title $tag --generate-notes
