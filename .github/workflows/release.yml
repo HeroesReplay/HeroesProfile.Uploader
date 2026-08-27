@@ -1,15 +1,16 @@
 name: Release
 
-# Push a tag that matches the AssemblyVersion in
-# Heroesprofile.Uploader.Windows\Properties\AssemblyInfo.cs, e.g.
+# Every push to master runs the same Zip and Installer solution configurations the
+# maintainer runs from Visual Studio (see SquirrelRelease.txt), squirrel releasify
+# included, so a break in packaging surfaces on the commit that caused it.
 #
-#   git tag v2.6.0 && git push origin v2.6.0
-#
-# This runs the same Zip and Installer solution configurations the maintainer
-# runs from Visual Studio (see SquirrelRelease.txt) and publishes the five
-# assets Squirrel's GitHubUpdateManager expects.
+# Publishing is what the version gates. A GitHub release is keyed by its tag, so
+# only a push whose AssemblyVersion in Heroesprofile.Uploader.Windows\Properties# AssemblyInfo.cs has no release yet goes out - bumping it is how you say "ship
+# this". Everything else builds, reports, and stops short of publishing.
 on:
   push:
+    branches:
+      - master
     tags:
       - 'v*'
   workflow_dispatch:
@@ -37,7 +38,7 @@ jobs:
       - uses: microsoft/setup-msbuild@v2
 
       # AssemblyInfo.cs is the single source of truth for the version. A tag push
-      # has to agree with it; a manual run with no tag just takes it from there.
+      # has to agree with it; a branch push or manual run takes it from there.
       - name: Resolve version
         id: version
         shell: pwsh
@@ -61,7 +62,6 @@ jobs:
             throw "Tag $tag does not match AssemblyVersion $version - bump AssemblyInfo.cs and retag"
           }
 
-          # gh would fail on this later anyway, but only after a ten minute build.
           # Actions runs pwsh with -ErrorActionPreference Stop, which by default
           # turns a non-zero exit from a native command into a terminating error,
           # and "no such release" is exactly the answer being asked for here.
@@ -72,17 +72,27 @@ jobs:
           # Actions ends every pwsh step with `exit $LASTEXITCODE`, so a handled
           # non-zero from gh still fails the step unless it is cleared
           $global:LASTEXITCODE = 0
+
+          # Not an error: most pushes are ordinary commits at a version that has
+          # already shipped. They still get built and packaged, just not published.
+          $publish = (-not $exists).ToString().ToLower()
           if ($exists) {
-            throw "Release $tag already exists - bump AssemblyVersion, or delete it with: gh release delete $tag"
+            $summary = "Release **$tag** already exists - built and packaged, but not published. Bump AssemblyVersion to ship."
+          } else {
+            $summary = "Version **$tag** has no release yet - this run will publish it."
           }
+          Write-Host $summary
+          $summary | Out-File $env:GITHUB_STEP_SUMMARY -Append
 
           "tag=$tag"         | Out-File $env:GITHUB_OUTPUT -Append
           "version=$version" | Out-File $env:GITHUB_OUTPUT -Append
+          "publish=$publish" | Out-File $env:GITHUB_OUTPUT -Append
 
       # Squirrel builds the delta against the previous -full.nupkg and appends to
       # the existing RELEASES index. Neither is in git, so pull them back off the
       # last published release or every build would ship a full-only feed.
       - name: Seed Releases folder from the previous release
+        if: steps.version.outputs.publish == 'true'
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
@@ -125,11 +135,15 @@ jobs:
           )
           $missing = $expected | Where-Object { -not (Test-Path $_) }
           if ($missing) { throw "Build did not produce: $($missing -join ', ')" }
-          if (-not (Test-Path "Releases\Heroesprofile.Uploader-$version-delta.nupkg")) {
+          # a non-publishing run never seeds, so it has nothing to diff against and
+          # a missing delta says nothing
+          if ("${{ steps.version.outputs.publish }}" -eq 'true' -and
+              -not (Test-Path "Releases\Heroesprofile.Uploader-$version-delta.nupkg")) {
             Write-Warning "No delta package - existing installs will take the full download"
           }
 
       - name: Publish release
+        if: steps.version.outputs.publish == 'true'
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
