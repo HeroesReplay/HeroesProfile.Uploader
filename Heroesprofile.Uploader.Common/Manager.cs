@@ -117,6 +117,8 @@ namespace Heroesprofile.Uploader.Common
 
             };
 
+            ReplayLocation.Changed += (_, __) => ReloadReplayFolder();
+
             _monitor.Start();
             StartBattleLobbyWatcherEvent();
 
@@ -132,12 +134,27 @@ namespace Heroesprofile.Uploader.Common
                     _live_monitor.StopBattleLobbyWatcher();
                     _liveProcessor = new LiveProcessor(PreMatchPage);
 
-                    await EnsureFileAvailable(e.Data);
                     var tmpPath = Path.GetTempFileName();
-                    await SafeCopy(e.Data, tmpPath, true);
-                    await _liveProcessor.StartProcessing(tmpPath);
-
-                    _live_monitor.StartBattleLobby();
+                    try {
+                        await EnsureFileAvailable(e.Data);
+                        _log.Debug($"Copying battlelobby '{e.Data}' to '{tmpPath}'");
+                        await SafeCopy(e.Data, tmpPath, true);
+                        await _liveProcessor.StartProcessing(tmpPath);
+                    }
+                    catch (Exception ex) {
+                        // without this the watcher below never restarts and the exception escapes
+                        // an async void handler, which takes the process down with it
+                        _log.Error(ex, $"Error processing battlelobby '{e.Data}'");
+                    }
+                    finally {
+                        try {
+                            File.Delete(tmpPath);
+                        }
+                        catch (Exception ex) {
+                            _log.Debug($"Could not delete temp battlelobby copy '{tmpPath}': {ex.Message}");
+                        }
+                        _live_monitor.StartBattleLobby();
+                    }
                 };
 
                 _live_monitor.StartBattleLobby();
@@ -148,6 +165,50 @@ namespace Heroesprofile.Uploader.Common
         {
             _monitor.Stop();
             processingQueue.CompleteAdding();
+        }
+
+        /// <summary>
+        /// Point the watchers at the currently configured replay folder and queue up any replays it holds
+        /// that we haven't seen yet. Lets a folder change in settings take effect without a restart.
+        /// </summary>
+        public void ReloadReplayFolder()
+        {
+            if (!_initialized) {
+                return;
+            }
+
+            _monitor.Stop();
+            _monitor.Start();
+
+            if (_live_monitor.IsStormSaveRunning()) {
+                _live_monitor.StopStormSaveWatcher();
+                _live_monitor.StartStormSave();
+            }
+
+            // scanning can take a while on a big folder, keep it off the caller's (ui) thread
+            Task.Run(() => {
+                try {
+                    var comparer = new ReplayFile.ReplayFileComparer();
+                    var known = new HashSet<ReplayFile>(Files, comparer);
+                    var found = _monitor.ScanReplays()
+                        .Select(x => new ReplayFile(x))
+                        .Where(x => !known.Contains(x))
+                        .OrderBy(x => x.Created)
+                        .ToList();
+
+                    if (!found.Any()) {
+                        return;
+                    }
+
+                    _log.Info($"Found {found.Count} new replays in {ReplayLocation.Current}");
+                    // insert oldest first so the newest ends up at the top of the list
+                    found.Map(x => Files.Insert(0, x));
+                    found.Where(x => x.UploadStatus == UploadStatus.None).Map(x => processingQueue.Add(x));
+                }
+                catch (Exception ex) {
+                    _log.Error(ex, "Error rescanning replay folder");
+                }
+            }).Forget();
         }
 
         private async Task UploadLoop()

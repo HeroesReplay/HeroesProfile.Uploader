@@ -16,16 +16,20 @@ namespace Heroesprofile.Uploader.Common
     public class Uploader : IUploader
     {
         private static readonly Logger _log = LogManager.GetCurrentClassLogger();
+        // v1, served from the main site. api.heroesprofile.com keeps answering the
+        // old paths for already-deployed clients, but it is not a base URL to build
+        // against — once DNS moves, everything on it except those aliases redirects
+        // here. The upload routes stay keyless, so there is still no token to send.
 #if DEBUG
-        const string HeroesProfileApiEndpoint = "http://127.0.0.1:8000/api";
-        const string HeroesProfileMatchParsed = "http://127.0.0.1:8000/openApi/Replay/Parsed/?replayID=";
+        const string HeroesProfileApiEndpoint = "http://127.0.0.1:8000/api/external/v1";
+        const string HeroesProfileMatchParsed = "http://127.0.0.1:8000/api/external/v1/replays/parsed?replayID=";
         const string HeroesProfileMatchSummary = "http://localhost/Match/Single/?replayID=";
 
 
 
 #else
-        const string HeroesProfileApiEndpoint = "https://api.heroesprofile.com/api";
-        const string HeroesProfileMatchParsed = "https://api.heroesprofile.com/openApi/Replay/Parsed/?replayID=";
+        const string HeroesProfileApiEndpoint = "https://www.heroesprofile.com/api/external/v1";
+        const string HeroesProfileMatchParsed = "https://www.heroesprofile.com/api/external/v1/replays/parsed?replayID=";
         const string HeroesProfileMatchSummary = "https://www.heroesprofile.com/Match/Single/?replayID=";
 #endif
 
@@ -70,6 +74,8 @@ namespace Heroesprofile.Uploader.Common
                     response = Encoding.UTF8.GetString(bytes);
                 }
 
+                _log.Debug($"Upload of '{file}' responded: {Describe(response)}");
+
                 UploadResult result = UploadResult.FromJson(response);
 
                 try {
@@ -78,6 +84,11 @@ namespace Heroesprofile.Uploader.Common
                     _log.Debug($"Postmatch check: replayID={replayID}, PostMatchPage={PostMatchPage}, fileAge={fileAge.TotalSeconds:F1}s");
                     if (fileAge <= TimeSpan.FromSeconds(60) && PostMatchPage && replayID != 0) {
                         await postMatchAnalysis(replayID);
+                    } else {
+                        var reason = !PostMatchPage ? "postmatch page disabled in settings"
+                            : replayID == 0 ? "no replayID in the upload response"
+                            : $"replay file is {fileAge.TotalSeconds:F0}s old, older than the 60s live cutoff";
+                        _log.Debug($"Skipping postmatch page: {reason}");
                     }
                 }
                 catch (Exception ex) {
@@ -111,27 +122,63 @@ namespace Heroesprofile.Uploader.Common
 
         private async Task postMatchAnalysis(int replayID)
         {
+            var parsedUrl = $"{HeroesProfileMatchParsed}{replayID}";
+            _log.Debug($"Waiting for replay {replayID} to be parsed: {parsedUrl}");
+
             var timer = new Stopwatch();
             timer.Start();
+            var checks = 0;
+            var lastResponse = "none";
             while (timer.ElapsedMilliseconds < 15000) {
+                checks++;
                 try {
                     string response;
                     using (var client = new WebClient()) {
-                        response = await client.DownloadStringTaskAsync($"{HeroesProfileMatchParsed}{replayID}");
+                        response = await client.DownloadStringTaskAsync(parsedUrl);
                     }
-                    if (response == "true") {
-                        Process.Start($"{HeroesProfileMatchSummary}{replayID}");
-                        WebhookNotifier.Notify("postmatch", $"{HeroesProfileMatchSummary}{replayID}");
+                    lastResponse = Describe(response);
+                    if (response?.Trim() == "true") {
+                        timer.Stop();
+                        var pageUrl = $"{HeroesProfileMatchSummary}{replayID}";
+                        _log.Info($"Replay {replayID} parsed after {timer.ElapsedMilliseconds}ms, opening postmatch page {pageUrl}");
+                        try {
+                            Process.Start(pageUrl);
+                        }
+                        catch (Exception ex) {
+                            _log.Error(ex, $"Failed to open postmatch page {pageUrl}");
+                        }
+                        WebhookNotifier.Notify("postmatch", pageUrl);
                         return;
                     }
                 }
-                catch (WebException ex) when (ex.Response != null) {
-                    await CheckApiThrottling(ex.Response);
+                catch (WebException ex) {
+                    var status = (ex.Response as HttpWebResponse)?.StatusCode;
+                    lastResponse = status != null ? $"HTTP {(int)status}" : $"{ex.Status}";
+                    _log.Warn(ex, $"Parsed check for replay {replayID} failed ({lastResponse})");
+                    if (ex.Response != null) {
+                        await CheckApiThrottling(ex.Response);
+                    }
                 }
                 await Task.Delay(1000);
             }
             timer.Stop();
+            _log.Warn($"Replay {replayID} was not parsed after {checks} checks over {timer.ElapsedMilliseconds}ms (last response: {lastResponse}), postmatch page not opened");
         }
+        /// <summary>
+        /// Render a response body for the log: an error page is worth seeing, but not all 40kb of it
+        /// </summary>
+        private static string Describe(string response)
+        {
+            if (response == null) {
+                return "<null>";
+            }
+            if (response.Length == 0) {
+                return "<empty>";
+            }
+            var oneLine = response.Replace("\r", " ").Replace("\n", " ").Trim();
+            return oneLine.Length > 500 ? $"{oneLine.Substring(0, 500)}... ({response.Length} chars total)" : oneLine;
+        }
+
         /// <summary>
         /// Check replay fingerprint against database to detect duplicate
         /// </summary>

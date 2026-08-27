@@ -202,5 +202,17 @@ namespace Heroesprofile.Uploader.Windows.Properties {
                 this["WebhookUrl"] = value;
             }
         }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string ReplayPath {
+            get {
+                return ((string)(this["ReplayPath"]));
+            }
+            set {
+                this["ReplayPath"] = value;
+            }
+        }
     }
 }

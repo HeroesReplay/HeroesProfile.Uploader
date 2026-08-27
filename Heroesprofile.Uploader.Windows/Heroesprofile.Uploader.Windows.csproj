@@ -142,14 +142,6 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Compile Include="WebhookDialog.xaml.cs">
-      <DependentUpon>WebhookDialog.xaml</DependentUpon>
-      <SubType>Code</SubType>
-    </Compile>
-    <Page Include="WebhookDialog.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
     <Page Include="Themes\Default\Default.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>

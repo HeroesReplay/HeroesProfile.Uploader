@@ -17,22 +17,6 @@ namespace Heroesprofile.Uploader.Windows
         public MainWindow()
         {
             InitializeComponent();
-            UpdateWebhookButtonLabel();
-        }
-
-        private void UpdateWebhookButtonLabel()
-        {
-            WebhookButton.Content = string.IsNullOrEmpty(App.Settings.WebhookUrl) ? "Set Webhook" : "Change Webhook";
-        }
-
-        private void Webhook_Click(object sender, RoutedEventArgs e)
-        {
-            var dialog = new WebhookDialog(App.Settings.WebhookUrl) { Owner = this };
-            if (dialog.ShowDialog() == true) {
-                App.Settings.WebhookUrl = dialog.WebhookUrl;
-                App.Settings.Save();
-                UpdateWebhookButtonLabel();
-            }
         }
 
         private void Twitch_Extension_Checkbox_Checked(object sender, RoutedEventArgs e)
