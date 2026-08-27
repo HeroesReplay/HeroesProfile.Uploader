@@ -74,8 +74,6 @@ namespace Heroesprofile.Uploader.Common
                     response = Encoding.UTF8.GetString(bytes);
                 }
 
-                _log.Debug($"Upload of '{file}' responded: {Describe(response)}");
-
                 UploadResult result = UploadResult.FromJson(response);
 
                 try {
@@ -84,11 +82,6 @@ namespace Heroesprofile.Uploader.Common
                     _log.Debug($"Postmatch check: replayID={replayID}, PostMatchPage={PostMatchPage}, fileAge={fileAge.TotalSeconds:F1}s");
                     if (fileAge <= TimeSpan.FromSeconds(60) && PostMatchPage && replayID != 0) {
                         await postMatchAnalysis(replayID);
-                    } else {
-                        var reason = !PostMatchPage ? "postmatch page disabled in settings"
-                            : replayID == 0 ? "no replayID in the upload response"
-                            : $"replay file is {fileAge.TotalSeconds:F0}s old, older than the 60s live cutoff";
-                        _log.Debug($"Skipping postmatch page: {reason}");
                     }
                 }
                 catch (Exception ex) {
@@ -123,8 +116,6 @@ namespace Heroesprofile.Uploader.Common
         private async Task postMatchAnalysis(int replayID)
         {
             var parsedUrl = $"{HeroesProfileMatchParsed}{replayID}";
-            _log.Debug($"Waiting for replay {replayID} to be parsed: {parsedUrl}");
-
             var timer = new Stopwatch();
             timer.Start();
             var checks = 0;
@@ -140,7 +131,7 @@ namespace Heroesprofile.Uploader.Common
                     if (response?.Trim() == "true") {
                         timer.Stop();
                         var pageUrl = $"{HeroesProfileMatchSummary}{replayID}";
-                        _log.Info($"Replay {replayID} parsed after {timer.ElapsedMilliseconds}ms, opening postmatch page {pageUrl}");
+                        _log.Debug($"Replay {replayID} parsed after {timer.ElapsedMilliseconds}ms, opening postmatch page {pageUrl}");
                         try {
                             Process.Start(pageUrl);
                         }

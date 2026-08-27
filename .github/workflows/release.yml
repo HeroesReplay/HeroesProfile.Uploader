@@ -13,10 +13,6 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
-    inputs:
-      tag:
-        description: 'Existing tag to build and release (e.g. v2.6.0)'
-        required: true
 
 permissions:
   contents: write
@@ -26,9 +22,7 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.inputs.tag || github.ref }}
+      - uses: actions/checkout@v5
 
       # The runner image does not always carry the 4.6.2 reference assemblies,
       # and without them the build dies with MSB3644.
@@ -42,19 +36,43 @@ jobs:
 
       - uses: microsoft/setup-msbuild@v2
 
+      # AssemblyInfo.cs is the single source of truth for the version. A tag push
+      # has to agree with it; a manual run with no tag just takes it from there.
       - name: Resolve version
         id: version
         shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          $tag = "${{ github.event.inputs.tag || github.ref_name }}"
           $assemblyInfo = Get-Content 'Heroesprofile.Uploader.Windows\Properties\AssemblyInfo.cs' -Raw
           if ($assemblyInfo -notmatch '(?m)^\[assembly: AssemblyVersion\("(\d+\.\d+\.\d+)') {
             throw "Could not read a three-part AssemblyVersion out of AssemblyInfo.cs"
           }
           $version = $Matches[1]
+
+          if ("${{ github.ref_type }}" -eq 'tag') {
+            $tag = "${{ github.ref_name }}"
+          } else {
+            $tag = "v$version"
+            Write-Host "Running from a branch, so taking the tag from AssemblyVersion: $tag"
+          }
+
           if ($tag.TrimStart('v') -ne $version) {
             throw "Tag $tag does not match AssemblyVersion $version - bump AssemblyInfo.cs and retag"
           }
+
+          # gh would fail on this later anyway, but only after a ten minute build.
+          # Actions runs pwsh with -ErrorActionPreference Stop, which by default
+          # turns a non-zero exit from a native command into a terminating error,
+          # and "no such release" is exactly the answer being asked for here.
+          $PSNativeCommandUseErrorActionPreference = $false
+          gh release view $tag *> $null
+          $exists = $LASTEXITCODE -eq 0
+          $PSNativeCommandUseErrorActionPreference = $true
+          if ($exists) {
+            throw "Release $tag already exists - bump AssemblyVersion, or delete it with: gh release delete $tag"
+          }
+
           "tag=$tag"         | Out-File $env:GITHUB_OUTPUT -Append
           "version=$version" | Out-File $env:GITHUB_OUTPUT -Append
 
@@ -73,7 +91,11 @@ jobs:
             return
           }
           Write-Host "Seeding from $previous"
+          $PSNativeCommandUseErrorActionPreference = $false
           gh release download $previous --dir Releases --pattern 'RELEASES' --pattern '*-full.nupkg'
+          if ($LASTEXITCODE -ne 0) {
+            Write-Warning "Could not seed from $previous - this build will publish a full package only"
+          }
 
       - name: Restore
         run: msbuild Heroesprofile.Uploader.sln -t:Restore -v:minimal
@@ -116,4 +138,6 @@ jobs:
             "Releases\HeroesProfileUploaderSetup.exe",
             "Releases\HeroesProfile.zip"
           ) + (Get-ChildItem "Releases\Heroesprofile.Uploader-$version-*.nupkg" | ForEach-Object { $_.FullName })
-          gh release create $tag $assets --title $tag --generate-notes
+          # --target places the tag when it does not exist yet (a manual run);
+          # it is ignored when the tag was pushed
+          gh release create $tag $assets --title $tag --generate-notes --target ${{ github.sha }}

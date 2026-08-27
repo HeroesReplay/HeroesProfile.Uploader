@@ -60,16 +60,12 @@ namespace Heroesprofile.Uploader.Common
 
         public async Task StartProcessing(string battleLobbyPath)
         {
-            _log.Debug($"Live processing started for '{battleLobbyPath}' (PreMatchPage={PreMatchPage})");
-
             if (!PreMatchPage) {
-                _log.Debug("Prematch page is disabled in settings, skipping");
                 return;
             }
 
             try {
                 byte[] replayBytes = File.ReadAllBytes(battleLobbyPath);
-                _log.Debug($"Read {replayBytes.Length} bytes of battlelobby data");
                 replayData = MpqBattlelobby.Parse(replayBytes);
             }
             catch (Exception ex) {
@@ -78,8 +74,6 @@ namespace Heroesprofile.Uploader.Common
             }
 
             var playerCount = replayData?.Players?.Count(x => x != null) ?? 0;
-            _log.Debug($"Parsed battlelobby, found {playerCount} players");
-
             if (playerCount == 0) {
                 // usually means the game was still writing the file when the watcher fired
                 _log.Warn("No players parsed out of the battlelobby, skipping prematch");
@@ -106,13 +100,8 @@ namespace Heroesprofile.Uploader.Common
 
                 var content = new FormUrlEncodedContent(values);
 
-                _log.Debug($"Posting prematch data to {apiUrl} ({payload.Length} chars)");
-                var timer = Stopwatch.StartNew();
                 var response = await client.PostAsync(apiUrl, content);
                 var responseString = await response.Content.ReadAsStringAsync();
-                timer.Stop();
-
-                _log.Debug($"Prematch responded HTTP {(int)response.StatusCode} {response.ReasonPhrase} in {timer.ElapsedMilliseconds}ms, body: {Describe(responseString)}");
 
                 if (!Int32.TryParse(responseString?.Trim(), out int value)) {
                     _log.Error($"Integer value not returned for prematch replayID. HTTP {(int)response.StatusCode} from {apiUrl}, response string: {Describe(responseString)}");
@@ -120,7 +109,7 @@ namespace Heroesprofile.Uploader.Common
                 }
 
                 var pageUrl = $"{heresprofile}{preMatchURI}{value}";
-                _log.Info($"Opening prematch page {pageUrl}");
+                _log.Debug($"Opening prematch page {pageUrl}");
                 try {
                     Process.Start(pageUrl);
                 }

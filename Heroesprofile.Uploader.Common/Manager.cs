@@ -137,7 +137,6 @@ namespace Heroesprofile.Uploader.Common
                     var tmpPath = Path.GetTempFileName();
                     try {
                         await EnsureFileAvailable(e.Data);
-                        _log.Debug($"Copying battlelobby '{e.Data}' to '{tmpPath}'");
                         await SafeCopy(e.Data, tmpPath, true);
                         await _liveProcessor.StartProcessing(tmpPath);
                     }
