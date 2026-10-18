@@ -95,7 +95,12 @@ namespace Heroesprofile.Uploader.Common
                 return;
             }
 
-            if (LobbyParsed != null) {
+            // AI players have no battletag, so they're never found in the lobby: every PvP mode has 10
+            // players, while versus AI, Practice and custom games with AI have fewer. No lobby reader
+            // and no pre-match page for those (the replay is skipped as AI-detected after the game too).
+            if (LobbyParsed != null && playerCount < 10) {
+                _log.Info($"Only {playerCount} players in the battlelobby (AI or custom game), not passing it to the lobby reader");
+            } else if (LobbyParsed != null) {
                 try {
                     LobbyParsed(replayData);
                 }
@@ -104,9 +109,6 @@ namespace Heroesprofile.Uploader.Common
                 }
             }
 
-            // AI players have no battletag, so they're never found in the lobby: every PvP mode has 10
-            // players, while versus AI, Practice and custom games with AI have fewer. No pre-match
-            // page for those (the replay is skipped as AI-detected after the game too).
             if (PreMatchPage && playerCount < 10) {
                 _log.Info($"Only {playerCount} players in the battlelobby (AI or custom game), not opening the prematch page");
             } else if (PreMatchPage) {
